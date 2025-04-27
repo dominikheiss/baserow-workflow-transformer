@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Baserow Workflow Transformer v1.2</title>
+    <title>N8N: Baserow Workflow Transformer v1.3</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -37,7 +37,7 @@
 </head>
 <body>
 
-    <h1>Baserow Workflow Transformer v1.2</h1>
+    <h1>Baserow Workflow Transformer v1.3</h1>
 
     <label>Upload Workflow JSON:</label><br>
     <input type="file" id="workflowFile" accept=".json"><br>
@@ -61,7 +61,7 @@
 
     <div id="log"></div>
 
-    <p style="position: fixed; bottom: 10px; right: 10px; font-size: 12px; color: gray;">v1.2</p>
+    <p style="position: fixed; bottom: 10px; right: 10px; font-size: 12px; color: gray;">v1.3</p>
 
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
     <script>
@@ -105,34 +105,70 @@
                     let changesInNode = 0;
                     const updatedNode = JSON.parse(JSON.stringify(node));
 
+                    function replaceId(value) {
+                        if (typeof value === "number") {
+                            const idStr = value.toString();
+                            return idMap[idStr] ? parseInt(idMap[idStr]) : value;
+                        }
+                        return value;
+                    }
+
                     // Map databaseId
                     if (updatedNode.parameters?.databaseId !== undefined) {
-                        const dbId = updatedNode.parameters.databaseId.toString();
-                        if (idMap[dbId]) {
-                            mappedResults.push(`Node ${node.name || node.id}: databaseId ${dbId} → ${idMap[dbId]}`);
-                            updatedNode.parameters.databaseId = parseInt(idMap[dbId]);
+                        const oldId = updatedNode.parameters.databaseId.toString();
+                        if (idMap[oldId]) {
+                            mappedResults.push(`Node ${node.name || node.id}: databaseId ${oldId} → ${idMap[oldId]}`);
+                            updatedNode.parameters.databaseId = parseInt(idMap[oldId]);
                             changesInNode++;
                         }
                     }
 
                     // Map tableId
                     if (updatedNode.parameters?.tableId !== undefined) {
-                        const tableId = updatedNode.parameters.tableId.toString();
-                        if (idMap[tableId]) {
-                            mappedResults.push(`Node ${node.name || node.id}: tableId ${tableId} → ${idMap[tableId]}`);
-                            updatedNode.parameters.tableId = parseInt(idMap[tableId]);
+                        const oldId = updatedNode.parameters.tableId.toString();
+                        if (idMap[oldId]) {
+                            mappedResults.push(`Node ${node.name || node.id}: tableId ${oldId} → ${idMap[oldId]}`);
+                            updatedNode.parameters.tableId = parseInt(idMap[oldId]);
                             changesInNode++;
                         }
                     }
 
-                    // Map fieldIds
+                    // Map fieldIds inside fieldsUi
                     if (updatedNode.parameters?.fieldsUi?.fieldValues) {
                         for (const field of updatedNode.parameters.fieldsUi.fieldValues) {
                             if (field.fieldId !== undefined) {
-                                const fieldId = field.fieldId.toString();
-                                if (idMap[fieldId]) {
-                                    mappedResults.push(`Node ${node.name || node.id}: fieldId ${fieldId} → ${idMap[fieldId]}`);
-                                    field.fieldId = parseInt(idMap[fieldId]);
+                                const oldId = field.fieldId.toString();
+                                if (idMap[oldId]) {
+                                    mappedResults.push(`Node ${node.name || node.id}: fieldId ${oldId} → ${idMap[oldId]}`);
+                                    field.fieldId = parseInt(idMap[oldId]);
+                                    changesInNode++;
+                                }
+                            }
+                        }
+                    }
+
+                    // Map fieldIds inside additionalOptions.filters.fields
+                    if (updatedNode.parameters?.additionalOptions?.filters?.fields) {
+                        for (const field of updatedNode.parameters.additionalOptions.filters.fields) {
+                            if (field.field !== undefined) {
+                                const oldId = field.field.toString();
+                                if (idMap[oldId]) {
+                                    mappedResults.push(`Node ${node.name || node.id}: filter.field ${oldId} → ${idMap[oldId]}`);
+                                    field.field = parseInt(idMap[oldId]);
+                                    changesInNode++;
+                                }
+                            }
+                        }
+                    }
+
+                    // Map fieldIds inside additionalOptions.order.fields
+                    if (updatedNode.parameters?.additionalOptions?.order?.fields) {
+                        for (const field of updatedNode.parameters.additionalOptions.order.fields) {
+                            if (field.field !== undefined) {
+                                const oldId = field.field.toString();
+                                if (idMap[oldId]) {
+                                    mappedResults.push(`Node ${node.name || node.id}: order.field ${oldId} → ${idMap[oldId]}`);
+                                    field.field = parseInt(idMap[oldId]);
                                     changesInNode++;
                                 }
                             }
