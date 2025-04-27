@@ -1,0 +1,139 @@
+﻿id,element_type,element_name,your_id,customer_id,parent_name,field_key
+1,database,BONSAI,183,213,workspace,db_workspace_BONSAI
+2,table,Templates,757,918,BONSAI,table_BONSAI_Templates
+3,field,Category,7626,10112,Templates,field_Templates_Category
+4,field,TemplateID,7627,10113,Templates,field_Templates_TemplateID
+5,field,Videos,7628,10114,Templates,field_Templates_Videos
+6,field,TargetChannel,7630,10115,Templates,field_Templates_TargetChannel
+7,field,voiceID,7631,10116,Templates,field_Templates_voiceID
+8,field,voiceModel,7632,10117,Templates,field_Templates_voiceModel
+9,field,backgroundMusic,7635,10118,Templates,field_Templates_backgroundMusic
+10,field,intro_instruction,7637,10119,Templates,field_Templates_intro_instruction
+11,field,scene_instruction,7638,10120,Templates,field_Templates_scene_instruction
+12,field,meta_instruction,7639,10121,Templates,field_Templates_meta_instruction
+13,field,AffiliateCTA,7643,10122,Templates,field_Templates_AffiliateCTA
+14,field,Affiliate_Comment,7644,10123,Templates,field_Templates_Affiliate_Comment
+15,field,AffiliateCTA_default,7647,10124,Templates,field_Templates_AffiliateCTA_default
+16,field,Affiliate_Comment_default,7648,10125,Templates,field_Templates_Affiliate_Comment_default
+17,field,intro_instruction_long,7651,10126,Templates,field_Templates_intro_instruction_long
+18,field,scene_instruction_long,7652,10127,Templates,field_Templates_scene_instruction_long
+19,table,Metrics_Short,761,919,BONSAI,table_BONSAI_Metrics_Short
+20,field,Video-Title,7694,10128,Metrics_Short,field_Metrics_Short_Video_Title
+21,field,Video-ID,7695,10129,Metrics_Short,field_Metrics_Short_Video_ID
+22,field,Views,7696,10130,Metrics_Short,field_Metrics_Short_Views
+23,field,Earnings,7697,10209,Metrics_Short,field_Metrics_Short_Earnings
+24,field,CPM,7698,10131,Metrics_Short,field_Metrics_Short_CPM
+25,field,ROI-Status,7699,10210,Metrics_Short,field_Metrics_Short_ROI_Status
+26,field,Likes,7700,10132,Metrics_Short,field_Metrics_Short_Likes
+27,field,Dislikes,7701,10133,Metrics_Short,field_Metrics_Short_Dislikes
+28,field,Comments,7702,10134,Metrics_Short,field_Metrics_Short_Comments
+29,field,Published at,7703,10135,Metrics_Short,field_Metrics_Short_Published_at
+30,field,uploadStatus,7704,10136,Metrics_Short,field_Metrics_Short_uploadStatus
+31,field,privacyStatus,7705,10137,Metrics_Short,field_Metrics_Short_privacyStatus
+32,field,embeddable,7706,10138,Metrics_Short,field_Metrics_Short_embeddable
+33,field,licensedContent,7707,10139,Metrics_Short,field_Metrics_Short_licensedContent
+34,field,regionRestriction,7708,10140,Metrics_Short,field_Metrics_Short_regionRestriction
+35,field,rejectionReason,7709,10141,Metrics_Short,field_Metrics_Short_rejectionReason
+36,field,ageRestriction,7710,10142,Metrics_Short,field_Metrics_Short_ageRestriction
+37,field,copyrightClaim,7711,10143,Metrics_Short,field_Metrics_Short_copyrightClaim
+38,field,Duration,7712,10144,Metrics_Short,field_Metrics_Short_Duration
+39,field,Category,7713,10145,Metrics_Short,field_Metrics_Short_Category
+40,table,Metrics_Long,763,920,BONSAI,table_BONSAI_Metrics_Long
+41,field,Video-Title,7735,10146,Metrics_Long,field_Metrics_Long_Video_Title
+42,field,Video-ID,7736,10147,Metrics_Long,field_Metrics_Long_Video_ID
+43,field,Views,7737,10148,Metrics_Long,field_Metrics_Long_Views
+44,field,Earnings,7753,10211,Metrics_Long,field_Metrics_Long_Earnings
+45,field,CPM,7738,10149,Metrics_Long,field_Metrics_Long_CPM
+46,field,ROI-Status,7754,10212,Metrics_Long,field_Metrics_Long_ROI_Status
+47,field,Likes,7739,10150,Metrics_Long,field_Metrics_Long_Likes
+48,field,Dislikes,7740,10151,Metrics_Long,field_Metrics_Long_Dislikes
+49,field,Comments,7741,10152,Metrics_Long,field_Metrics_Long_Comments
+50,field,Published at,7742,10153,Metrics_Long,field_Metrics_Long_Published_at
+51,field,uploadStatus,7743,10154,Metrics_Long,field_Metrics_Long_uploadStatus
+52,field,privacyStatus,7744,10155,Metrics_Long,field_Metrics_Long_privacyStatus
+53,field,embeddable,7745,10156,Metrics_Long,field_Metrics_Long_embeddable
+54,field,licensedContent,7746,10157,Metrics_Long,field_Metrics_Long_licensedContent
+55,field,regionRestriction,7747,10158,Metrics_Long,field_Metrics_Long_regionRestriction
+56,field,rejectionReason,7748,10159,Metrics_Long,field_Metrics_Long_rejectionReason
+57,field,ageRestriction,7749,10160,Metrics_Long,field_Metrics_Long_ageRestriction
+58,field,copyrightClaim,7750,10161,Metrics_Long,field_Metrics_Long_copyrightClaim
+59,field,Duration,7751,10162,Metrics_Long,field_Metrics_Long_Duration
+60,field,Category,7752,10163,Metrics_Long,field_Metrics_Long_Category
+61,table,Comment-Management,756,921,BONSAI,table_BONSAI_Comment_Management
+62,field,Video-ID,7616,10164,Comment-Management,field_Comment_Management_Video_ID
+63,field,Comment,7617,10165,Comment-Management,field_Comment_Management_Comment
+64,field,Answer,7618,10166,Comment-Management,field_Comment_Management_Answer
+65,field,Status,7619,10167,Comment-Management,field_Comment_Management_Status
+66,field,Category,7620,10168,Comment-Management,field_Comment_Management_Category
+67,field,Author,7621,10169,Comment-Management,field_Comment_Management_Author
+68,field,Video-Title,7622,10170,Comment-Management,field_Comment_Management_Video_Title
+69,field,Author Channel,7623,10171,Comment-Management,field_Comment_Management_Author_Channel
+70,field,Comment-ID,7624,10172,Comment-Management,field_Comment_Management_Comment_ID
+71,field,Date,7625,10173,Comment-Management,field_Comment_Management_Date
+72,table,Fails-Downloads,758,922,BONSAI,table_BONSAI_Fails_Downloads
+73,field,ID,7655,10175,Fails-Downloads,field_Fails_Downloads_ID
+74,field,title,7656,10176,Fails-Downloads,field_Fails_Downloads_title
+75,field,source,7657,10177,Fails-Downloads,field_Fails_Downloads_source
+76,field,minio_url,7658,10178,Fails-Downloads,field_Fails_Downloads_minio_url
+77,field,video_url,7659,10179,Fails-Downloads,field_Fails_Downloads_video_url
+78,field,status,7660,10180,Fails-Downloads,field_Fails_Downloads_status
+79,field,merged_url,7661,10181,Fails-Downloads,field_Fails_Downloads_merged_url
+80,field,final_video,7662,10182,Fails-Downloads,field_Fails_Downloads_final_video
+81,field,description,7663,10183,Fails-Downloads,field_Fails_Downloads_description
+82,field,hashtags,7664,10184,Fails-Downloads,field_Fails_Downloads_hashtags
+83,field,keywords,7665,10185,Fails-Downloads,field_Fails_Downloads_keywords
+84,field,category,7666,10186,Fails-Downloads,field_Fails_Downloads_category
+85,field,subcategory,7667,10187,Fails-Downloads,field_Fails_Downloads_subcategory
+86,field,Videos,7668,10188,Fails-Downloads,field_Fails_Downloads_Videos
+87,table,Baserow-Mapping,936,937,BONSAI,table_BONSAI_Baserow_Mapping
+88,field,element_type,10378,10385,Baserow-Mapping,field_Baserow_Mapping_element_type
+89,field,element_name,10379,10386,Baserow-Mapping,field_Baserow_Mapping_element_name
+90,field,your_id,10380,10387,Baserow-Mapping,field_Baserow_Mapping_your_id
+91,field,customer_id,10381,10388,Baserow-Mapping,field_Baserow_Mapping_customer_id
+92,field,parent_name,10382,10389,Baserow-Mapping,field_Baserow_Mapping_parent_name
+93,field,field_key,10383,10390,Baserow-Mapping,field_Baserow_Mapping_field_key
+94,table,Videos,755,917,BONSAI,table_BONSAI_Videos
+95,field,Video Title,7574,10083,Videos,field_Videos_Video_Title
+96,field,Status,7575,10084,Videos,field_Videos_Status
+97,field,Number of scenes,7576,10085,Videos,field_Videos_Number_of_scenes
+98,field,Style,7577,10086,Videos,field_Videos_Style
+99,field,Voice,7679,10195,Videos,field_Videos_Voice
+100,field,Image model,7578,10087,Videos,field_Videos_Image_model
+101,field,Seconds per scene,7579,10088,Videos,field_Videos_Seconds_per_scene
+102,field,Video title (Youtube),7580,10089,Videos,field_Videos_Video_title__Youtube_
+103,field,Video Description,7581,10090,Videos,field_Videos_Video_Description
+104,field,Keywords,7582,10091,Videos,field_Videos_Keywords
+105,field,Final Video,7583,10092,Videos,field_Videos_Final_Video
+106,field,Video URL,7584,10093,Videos,field_Videos_Video_URL
+107,field,Short,7585,10094,Videos,field_Videos_Short
+108,field,Category,7586,10095,Videos,field_Videos_Category
+109,field,Template Link,7587,10096,Videos,field_Videos_Template_Link
+110,field,Video URL Youtube,7588,10097,Videos,field_Videos_Video_URL_Youtube
+111,field,Hashed-Keywords,7589,10098,Videos,field_Videos_Hashed_Keywords
+112,field,TikTok Description,7590,10099,Videos,field_Videos_TikTok_Description
+113,field,Instagram Description,7591,10100,Videos,field_Videos_Instagram_Description
+114,field,voiceModel,7680,10196,Videos,field_Videos_voiceModel
+115,field,Priority,7592,10101,Videos,field_Videos_Priority
+116,field,TargetChannel,7681,10197,Videos,field_Videos_TargetChannel
+117,field,VideoCreationDate,7593,10102,Videos,field_Videos_VideoCreationDate
+118,field,Template,7682,10198,Videos,field_Videos_Template
+119,field,IdeaCreationDate,7594,10103,Videos,field_Videos_IdeaCreationDate
+120,field,minio_url,7596,10104,Videos,field_Videos_minio_url
+121,field,merged_url,7597,10105,Videos,field_Videos_merged_url
+122,field,scenes,7598,10106,Videos,field_Videos_scenes
+123,field,videoID,7601,10107,Videos,field_Videos_videoID
+124,field,errorMessage,7602,10108,Videos,field_Videos_errorMessage
+125,field,backgroundMusic,7683,10199,Videos,field_Videos_backgroundMusic
+126,field,Sub-Category,7604,10109,Videos,field_Videos_Sub_Category
+127,field,meta_instruction,7684,10200,Videos,field_Videos_meta_instruction
+128,field,intro_instruction,7685,10201,Videos,field_Videos_intro_instruction
+129,field,scene_instruction,7686,10202,Videos,field_Videos_scene_instruction
+130,field,Affiliate_CTA,7687,10203,Videos,field_Videos_Affiliate_CTA
+131,field,Affiliate_Comment,7688,10204,Videos,field_Videos_Affiliate_Comment
+132,field,Affiliate_Comment_default,7689,10205,Videos,field_Videos_Affiliate_Comment_default
+133,field,Affiliate_CTA_default,7690,10206,Videos,field_Videos_Affiliate_CTA_default
+134,field,intro_instruction_long,7691,10207,Videos,field_Videos_intro_instruction_long
+135,field,scene_instruction_long,7692,10208,Videos,field_Videos_scene_instruction_long
+136,field,Video_Type,7614,10110,Videos,field_Videos_Video_Type
+137,field,AutoPublish,7615,10111,Videos,field_Videos_AutoPublish
+177,field,Number,,10174,Comment-Management,field_Comment_Management_Number
