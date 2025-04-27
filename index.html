@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>N8N: Baserow Workflow Transformer v2.6</title>
+    <title>N8N: Baserow Workflow Transformer v2.7</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -340,6 +340,14 @@
             margin-bottom: 1rem;
             font-size: 1rem;
         }
+        .unmapped-ids-box {
+            background: #fffbe6;
+            color: #222;
+        }
+        [data-theme="dark"] .unmapped-ids-box {
+            background: #333300 !important;
+            color: #fff !important;
+        }
     </style>
 </head>
 <body>
@@ -348,7 +356,7 @@
     </button>
 
     <div class="container">
-        <h1>Baserow Workflow Transformer v2.6</h1>
+        <h1>Baserow Workflow Transformer v2.7</h1>
         <div id="dropArea" class="upload-section" style="border: 2px dashed #4f46e5; text-align:center; margin-bottom:1rem; cursor:pointer;">
             <b>Workflows hierher ziehen oder klicken, um auszuwählen</b>
             <input type="file" id="workflowFile" accept=".json" multiple style="display:none;">
@@ -404,7 +412,7 @@
         </div>
     </div>
 
-    <div class="version">v2.6</div>
+    <div class="version">v2.7</div>
 
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -417,6 +425,7 @@
         let selectedFiles = [];
         let selectedCSV = null;
         let debugMode = false;
+        let lastLogMessages = [], lastErrorGroups = null, lastDetails = [], lastDebugLogs = [];
 
         // --- Drag & Drop + File List for Workflows ---
         const dropArea = document.getElementById('dropArea');
@@ -435,17 +444,15 @@
         dropArea.addEventListener('drop', e => {
             e.preventDefault();
             dropArea.style.background = '';
-            handleFiles(Array.from(e.dataTransfer.files));
+            handleFiles(Array.from(e.dataTransfer.files), true);
         });
         workflowInput.addEventListener('change', e => {
-            handleFiles(Array.from(e.target.files));
+            handleFiles(Array.from(e.target.files), false);
         });
 
-        function handleFiles(files) {
-            // Reset, wenn neue Dateien kommen
-            if (files.length > 0) {
-                selectedFiles = [];
-            }
+        function handleFiles(files, isDragDrop) {
+            if (!files.length) return;
+            if (!isDragDrop) selectedFiles = []; // Klick-Auswahl ersetzt, DragDrop fügt hinzu
             files.forEach(f => {
                 if (!selectedFiles.some(sf => sf.name === f.name && sf.size === f.size)) {
                     selectedFiles.push(f);
@@ -557,6 +564,8 @@
         // Debug-Option
         document.getElementById('debugToggle').addEventListener('change', function(e) {
             debugMode = e.target.checked;
+            // Zeige/Verstecke Debug-Log sofort nach Togglen
+            displayLog(lastLogMessages, lastErrorGroups, lastDetails, lastDebugLogs);
         });
 
         function isLikelyExpression(val) {
@@ -599,6 +608,10 @@
         }
 
         function displayLog(messages, errorGroups, details, debugLogs) {
+            lastLogMessages = messages;
+            lastErrorGroups = errorGroups;
+            lastDetails = details;
+            lastDebugLogs = debugLogs;
             const logDiv = document.getElementById('log');
             let html = '';
             if (messages.length > 0) {
@@ -608,7 +621,7 @@
                 html += '<h4 style="color:#f59e0b;">Unmapped IDs:</h4>';
                 Object.entries(errorGroups).forEach(([type, arr]) => {
                     if (arr.length > 0) {
-                        html += `<b>${type}:</b> <ul style='background:#fffbe6;'>` + arr.map(id => `<li>${id}</li>`).join('') + '</ul>';
+                        html += `<b>${type}:</b> <ul class='unmapped-ids-box'>` + arr.map(id => `<li>${id}</li>`).join('') + '</ul>';
                     }
                 });
             }
