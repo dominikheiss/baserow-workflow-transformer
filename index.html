@@ -57,20 +57,35 @@
                 }
 
                 const updatedNode = JSON.parse(JSON.stringify(node));
-                updatedNode.parameters = JSON.parse(JSON.stringify(node.parameters), function(key, value) {
-                    if (typeof value === "string") {
-                        const match = value.match(/^{{\s*(\d+)\s*}}$/);
-                        if (match && idMap[match[1]]) {
-                            return `{{ ${idMap[match[1]]} }}`;
+
+                // Map databaseId
+                if (updatedNode.parameters?.databaseId !== undefined) {
+                    const dbId = updatedNode.parameters.databaseId.toString();
+                    if (idMap[dbId]) {
+                        updatedNode.parameters.databaseId = parseInt(idMap[dbId]);
+                    }
+                }
+
+                // Map tableId
+                if (updatedNode.parameters?.tableId !== undefined) {
+                    const tableId = updatedNode.parameters.tableId.toString();
+                    if (idMap[tableId]) {
+                        updatedNode.parameters.tableId = parseInt(idMap[tableId]);
+                    }
+                }
+
+                // Map fieldIds inside fieldsUi
+                if (updatedNode.parameters?.fieldsUi?.fieldValues) {
+                    for (const field of updatedNode.parameters.fieldsUi.fieldValues) {
+                        if (field.fieldId !== undefined) {
+                            const fieldId = field.fieldId.toString();
+                            if (idMap[fieldId]) {
+                                field.fieldId = parseInt(idMap[fieldId]);
+                            }
                         }
                     }
-                    if (typeof value === "number") {
-                        if (idMap[value.toString()]) {
-                            return parseInt(idMap[value.toString()]);
-                        }
-                    }
-                    return value;
-                });
+                }
+
                 return updatedNode;
             }
 
