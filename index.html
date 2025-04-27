@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>N8N: Baserow Workflow Transformer v2.7</title>
+    <title>N8N: Baserow Workflow Transformer v2.8</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -356,7 +356,7 @@
     </button>
 
     <div class="container">
-        <h1>Baserow Workflow Transformer v2.7</h1>
+        <h1>Baserow Workflow Transformer v2.8</h1>
         <div id="dropArea" class="upload-section" style="border: 2px dashed #4f46e5; text-align:center; margin-bottom:1rem; cursor:pointer;">
             <b>Workflows hierher ziehen oder klicken, um auszuwählen</b>
             <input type="file" id="workflowFile" accept=".json" multiple style="display:none;">
@@ -412,7 +412,7 @@
         </div>
     </div>
 
-    <div class="version">v2.7</div>
+    <div class="version">v2.8</div>
 
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -444,15 +444,15 @@
         dropArea.addEventListener('drop', e => {
             e.preventDefault();
             dropArea.style.background = '';
-            handleFiles(Array.from(e.dataTransfer.files), true);
+            handleFiles(Array.from(e.dataTransfer.files));
         });
         workflowInput.addEventListener('change', e => {
-            handleFiles(Array.from(e.target.files), false);
+            handleFiles(Array.from(e.target.files));
         });
 
-        function handleFiles(files, isDragDrop) {
+        function handleFiles(files) {
             if (!files.length) return;
-            if (!isDragDrop) selectedFiles = []; // Klick-Auswahl ersetzt, DragDrop fügt hinzu
+            selectedFiles = [];
             files.forEach(f => {
                 if (!selectedFiles.some(sf => sf.name === f.name && sf.size === f.size)) {
                     selectedFiles.push(f);
