@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>N8N: Baserow Workflow Transformer v1.5</title>
+    <title>N8N: Baserow Workflow Transformer v1.7</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -312,7 +312,7 @@
     </button>
 
     <div class="container">
-        <h1>Baserow Workflow Transformer v1.5</h1>
+        <h1>Baserow Workflow Transformer v1.7</h1>
 
         <div class="upload-section" id="workflowUpload">
             <label>
@@ -376,7 +376,7 @@
         <div id="log"></div>
     </div>
 
-    <div class="version">v1.5</div>
+    <div class="version">v1.7</div>
 
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
     <script>
@@ -420,79 +420,34 @@
                     let changesInNode = 0;
                     const updatedNode = JSON.parse(JSON.stringify(node));
 
-                    function replaceId(value) {
-                        if (typeof value === "number") {
-                            const idStr = value.toString();
-                            return idMap[idStr] ? parseInt(idMap[idStr]) : value;
-                        }
-                        return value;
-                    }
-
-                    // Map databaseId
-                    if (updatedNode.parameters?.databaseId !== undefined) {
-                        const oldId = updatedNode.parameters.databaseId.toString();
-                        if (idMap[oldId]) {
-                            mappedResults.push(`Node ${node.name || node.id}: databaseId ${oldId} → ${idMap[oldId]}`);
-                            updatedNode.parameters.databaseId = parseInt(idMap[oldId]);
-                            changesInNode++;
-                        }
-                    }
-
-                    // Map tableId
-                    if (updatedNode.parameters?.tableId !== undefined) {
-                        const oldId = updatedNode.parameters.tableId.toString();
-                        if (idMap[oldId]) {
-                            mappedResults.push(`Node ${node.name || node.id}: tableId ${oldId} → ${idMap[oldId]}`);
-                            updatedNode.parameters.tableId = parseInt(idMap[oldId]);
-                            changesInNode++;
-                        }
-                    }
-
-                    // Map fieldIds inside fieldsUi
-                    if (updatedNode.parameters?.fieldsUi?.fieldValues) {
-                        for (const field of updatedNode.parameters.fieldsUi.fieldValues) {
-                            if (field.fieldId !== undefined) {
-                                const oldId = field.fieldId.toString();
-                                if (idMap[oldId]) {
-                                    mappedResults.push(`Node ${node.name || node.id}: fieldId ${oldId} → ${idMap[oldId]}`);
-                                    field.fieldId = parseInt(idMap[oldId]);
-                                    changesInNode++;
+                    function deepReplace(obj) {
+                        if (Array.isArray(obj)) {
+                            return obj.map(deepReplace);
+                        } else if (obj && typeof obj === 'object') {
+                            for (const key in obj) {
+                                if (key === 'databaseId' || key === 'tableId' || key === 'fieldId' || key === 'field' || key === 'rowId') {
+                                    const value = obj[key];
+                                    if (typeof value === "number") {
+                                        const idStr = value.toString();
+                                        if (idMap[idStr]) {
+                                            mappedResults.push(`Node ${node.name || node.id}: ${key} ${idStr} → ${idMap[idStr]}`);
+                                            obj[key] = parseInt(idMap[idStr]);
+                                            changesInNode++;
+                                        }
+                                    }
                                 }
+                                obj[key] = deepReplace(obj[key]);
                             }
                         }
+                        return obj;
                     }
 
-                    // Map fieldIds inside additionalOptions.filters.fields
-                    if (updatedNode.parameters?.additionalOptions?.filters?.fields) {
-                        for (const field of updatedNode.parameters.additionalOptions.filters.fields) {
-                            if (field.field !== undefined) {
-                                const oldId = field.field.toString();
-                                if (idMap[oldId]) {
-                                    mappedResults.push(`Node ${node.name || node.id}: filter.field ${oldId} → ${idMap[oldId]}`);
-                                    field.field = parseInt(idMap[oldId]);
-                                    changesInNode++;
-                                }
-                            }
-                        }
-                    }
-
-                    // Map fieldIds inside additionalOptions.order.fields
-                    if (updatedNode.parameters?.additionalOptions?.order?.fields) {
-                        for (const field of updatedNode.parameters.additionalOptions.order.fields) {
-                            if (field.field !== undefined) {
-                                const oldId = field.field.toString();
-                                if (idMap[oldId]) {
-                                    mappedResults.push(`Node ${node.name || node.id}: order.field ${oldId} → ${idMap[oldId]}`);
-                                    field.field = parseInt(idMap[oldId]);
-                                    changesInNode++;
-                                }
-                            }
-                        }
-                    }
+                    deepReplace(updatedNode.parameters);
 
                     if (changesInNode > 0) {
                         nodeChanges++;
                     }
+
                     return updatedNode;
                 });
             }
@@ -505,7 +460,7 @@
 
             displayLog(mappedResults);
 
-            const blob = new Blob([JSON.stringify(updatedWorkflow, null, 2)], {type: "application/json"});
+            const blob = new Blob([JSON.stringify(updatedWorkflow, null, 2)], { type: "application/json" });
             const url = URL.createObjectURL(blob);
 
             const link = document.getElementById('downloadLink');
