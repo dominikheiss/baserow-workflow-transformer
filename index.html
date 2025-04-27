@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>N8N: Baserow Workflow Transformer v1.9</title>
+    <title>N8N: Baserow Workflow Transformer v2.0</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -312,7 +312,8 @@
     </button>
 
     <div class="container">
-        <h1>Baserow Workflow Transformer v1.9</h1>
+        <h1>Baserow Workflow Transformer v2.0</h1>
+        <div id="zipDownloadContainer"></div>
 
         <div class="upload-section" id="workflowUpload">
             <label>
@@ -376,16 +377,59 @@
         <div id="log"></div>
     </div>
 
-    <div class="version">v1.9</div>
+    <div class="version">v2.0</div>
 
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <script>
         let workflowData = null;
         let mappingData = null;
         let originalWorkflowName = "";
+        let lastDownloadBlobs = [];
+
+        function isLikelyExpression(val) {
+            return typeof val === 'string' && val.trim().startsWith('={{');
+        }
+        function isLikelyBoolOrString(val) {
+            return ["true","false","Idea","short"].includes(String(val).trim());
+        }
+        function isLikelyNumber(val) {
+            return /^\d+$/.test(String(val));
+        }
+
+        function groupUnmapped(ids) {
+            const groups = { fieldId: [], databaseId: [], tableId: [], other: [] };
+            ids.forEach(id => {
+                if (isLikelyExpression(id) || isLikelyBoolOrString(id)) return;
+                if (id.length > 8 && isLikelyNumber(id)) groups.fieldId.push(id);
+                else if (id.length <= 4 && isLikelyNumber(id)) groups.databaseId.push(id);
+                else if (id.length > 4 && id.length <= 6 && isLikelyNumber(id)) groups.tableId.push(id);
+                else groups.other.push(id);
+            });
+            return groups;
+        }
+
+        function displayLog(messages, errorGroups) {
+            const logDiv = document.getElementById('log');
+            let html = '';
+            if (messages.length > 0) {
+                html += '<ul>' + messages.map(msg => `<li>${msg}</li>`).join('') + '</ul>';
+            }
+            if (errorGroups) {
+                html += '<h4>Unmapped IDs:</h4>';
+                Object.entries(errorGroups).forEach(([type, arr]) => {
+                    if (arr.length > 0) {
+                        html += `<b>${type}:</b> <ul>` + arr.map(id => `<li>${id}</li>`).join('') + '</ul>';
+                    }
+                });
+            }
+            logDiv.innerHTML = html;
+        }
 
         function startMapping() {
             clearLog();
+            lastDownloadBlobs = [];
+            document.getElementById('zipDownloadContainer').innerHTML = '';
             const selectedNodeTypes = Array.from(document.getElementById('nodeTypes').selectedOptions).map(option => option.value);
 
             if (!workflowData || !mappingData) {
@@ -398,104 +442,116 @@
                 return;
             }
 
-            updateStatus("Mapping started...", "black");
+            // Multi-Workflow-Unterstützung
+            const workflows = Array.isArray(workflowData) ? workflowData : [workflowData];
+            let allLogs = [];
+            let allErrorGroups = [];
+            let allBlobs = [];
+            let allNames = [];
 
-            const idMap = {};
-            for (const row of mappingData.data) {
-                if (row.your_id && row.customer_id) {
-                    idMap[row.your_id.trim()] = row.customer_id.trim();
-                }
-            }
-
-            const updatedWorkflow = JSON.parse(JSON.stringify(workflowData));
-            const mappedResults = [];
-            const unmappedIds = new Set();
-            let nodeChanges = 0;
-
-            function collectIds(obj) {
-                if (Array.isArray(obj)) {
-                    obj.forEach(collectIds);
-                } else if (obj && typeof obj === 'object') {
-                    for (const key in obj) {
-                        const value = obj[key];
-                        if (typeof value === 'string' || typeof value === 'number') {
-                            unmappedIds.add(value.toString());
-                        }
-                        collectIds(value);
+            workflows.forEach((wf, idx) => {
+                updateStatus(`Mapping started... (${idx+1}/${workflows.length})`, "black");
+                const idMap = {};
+                for (const row of mappingData.data) {
+                    if (row.your_id && row.customer_id) {
+                        idMap[row.your_id.trim()] = row.customer_id.trim();
                     }
                 }
-            }
-
-            if (updatedWorkflow.nodes && Array.isArray(updatedWorkflow.nodes)) {
-                updatedWorkflow.nodes = updatedWorkflow.nodes.map(node => {
-                    if (!selectedNodeTypes.includes(node.type)) {
-                        return node;
-                    }
-
-                    let changesInNode = 0;
-                    const updatedNode = JSON.parse(JSON.stringify(node));
-
-                    function deepReplace(obj) {
-                        if (Array.isArray(obj)) {
-                            return obj.map(deepReplace);
-                        } else if (obj && typeof obj === 'object') {
-                            for (const key in obj) {
-                                const value = obj[key];
-                                if (typeof value === 'string' || typeof value === 'number') {
-                                    const idStr = value.toString();
-                                    if (idMap.hasOwnProperty(idStr)) {
-                                        mappedResults.push(`Node ${node.name || node.id}: ${key} ${idStr} → ${idMap[idStr]}`);
-                                        obj[key] = (typeof value === 'number') ? parseInt(idMap[idStr]) : idMap[idStr];
-                                        changesInNode++;
-                                    }
-                                }
-                                obj[key] = deepReplace(obj[key]);
+                const updatedWorkflow = JSON.parse(JSON.stringify(wf));
+                const mappedResults = [];
+                const unmappedIds = new Set();
+                let nodeChanges = 0;
+                function collectIds(obj) {
+                    if (Array.isArray(obj)) {
+                        obj.forEach(collectIds);
+                    } else if (obj && typeof obj === 'object') {
+                        for (const key in obj) {
+                            const value = obj[key];
+                            if (typeof value === 'string' || typeof value === 'number') {
+                                unmappedIds.add(value.toString());
                             }
+                            collectIds(value);
                         }
-                        return obj;
                     }
+                }
+                if (updatedWorkflow.nodes && Array.isArray(updatedWorkflow.nodes)) {
+                    updatedWorkflow.nodes = updatedWorkflow.nodes.map(node => {
+                        if (!selectedNodeTypes.includes(node.type)) {
+                            return node;
+                        }
+                        let changesInNode = 0;
+                        const updatedNode = JSON.parse(JSON.stringify(node));
+                        function deepReplace(obj) {
+                            if (Array.isArray(obj)) {
+                                return obj.map(deepReplace);
+                            } else if (obj && typeof obj === 'object') {
+                                for (const key in obj) {
+                                    const value = obj[key];
+                                    if (typeof value === 'string' || typeof value === 'number') {
+                                        const idStr = value.toString();
+                                        if (idMap.hasOwnProperty(idStr)) {
+                                            mappedResults.push(`Node ${node.name || node.id}: ${key} ${idStr} → ${idMap[idStr]}`);
+                                            obj[key] = (typeof value === 'number') ? parseInt(idMap[idStr]) : idMap[idStr];
+                                            changesInNode++;
+                                        }
+                                    }
+                                    obj[key] = deepReplace(obj[key]);
+                                }
+                            }
+                            return obj;
+                        }
+                        collectIds(updatedNode.parameters);
+                        deepReplace(updatedNode.parameters);
+                        if (changesInNode > 0) {
+                            nodeChanges++;
+                        }
+                        return updatedNode;
+                    });
+                }
+                const mappedIds = new Set(Object.keys(idMap));
+                const actuallyMapped = new Set(mappedResults.map(msg => msg.match(/\b(\d+)\b →/)).filter(Boolean).map(m => m[1]));
+                const unmappedUsed = Array.from(unmappedIds).filter(id => mappedIds.has(id) && !actuallyMapped.has(id));
+                const notInMapping = Array.from(unmappedIds).filter(id => !mappedIds.has(id));
+                const errorGroups = groupUnmapped(notInMapping);
+                let errorLog = [];
+                if (mappedResults.length === 0) {
+                    errorLog.push("<b>Keine passenden IDs gefunden. Nichts gemappt.</b>");
+                } else {
+                    errorLog.push(`<b>Mapping abgeschlossen.</b> ${mappedResults.length} IDs gemappt in ${nodeChanges} Nodes.`);
+                }
+                if (unmappedUsed.length > 0) {
+                    errorLog.push("IDs im Workflow gefunden, aber nicht gemappt (obwohl in Mapping-CSV): " + unmappedUsed.join(", "));
+                }
+                allLogs.push(`<h3>Workflow ${idx+1}: ${originalWorkflowName || 'Workflow'} </h3>` + errorLog.join('<br>'));
+                allErrorGroups.push(errorGroups);
+                const blob = new Blob([JSON.stringify(updatedWorkflow, null, 2)], { type: "application/json" });
+                allBlobs.push(blob);
+                allNames.push((originalWorkflowName ? originalWorkflowName.replace(/\.json$/i, "") : "transformed_workflow") + `_mapped_${idx+1}.json`);
+            });
+            // Download-Links
+            const downloadLinks = allBlobs.map((blob, i) => {
+                const url = URL.createObjectURL(blob);
+                return `<a href="${url}" download="${allNames[i]}" class="download-link">Download Workflow ${i+1}</a>`;
+            }).join(' ');
+            document.getElementById('downloadLink').style.display = 'none';
+            document.getElementById('zipDownloadContainer').innerHTML = downloadLinks +
+                '<button onclick="downloadAllAsZip()" style="margin-left:20px;">Alle als ZIP herunterladen</button>';
+            // Log-Ausgabe
+            displayLog(allLogs, allErrorGroups[0]);
+            lastDownloadBlobs = allBlobs.map((blob, i) => ({blob, name: allNames[i]}));
+        }
 
-                    collectIds(updatedNode.parameters);
-                    deepReplace(updatedNode.parameters);
-
-                    if (changesInNode > 0) {
-                        nodeChanges++;
-                    }
-
-                    return updatedNode;
-                });
-            }
-
-            const mappedIds = new Set(Object.keys(idMap));
-            const actuallyMapped = new Set(mappedResults.map(msg => msg.match(/\b(\d+)\b →/)).filter(Boolean).map(m => m[1]));
-            const unmappedUsed = Array.from(unmappedIds).filter(id => mappedIds.has(id) && !actuallyMapped.has(id));
-            const notInMapping = Array.from(unmappedIds).filter(id => !mappedIds.has(id));
-
-            let errorLog = [];
-            if (unmappedUsed.length > 0) {
-                errorLog.push("IDs im Workflow gefunden, aber nicht gemappt (obwohl in Mapping-CSV): " + unmappedUsed.join(", "));
-            }
-            if (notInMapping.length > 0) {
-                errorLog.push("IDs im Workflow gefunden, aber nicht in Mapping-CSV vorhanden: " + notInMapping.join(", "));
-            }
-
-            if (mappedResults.length === 0) {
-                updateStatus("No matching IDs found. Nothing mapped.", "orange");
-            } else {
-                updateStatus(`Mapping completed. ${mappedResults.length} IDs mapped across ${nodeChanges} nodes.`, "green");
-            }
-
-            displayLog(mappedResults.concat(errorLog));
-
-            const blob = new Blob([JSON.stringify(updatedWorkflow, null, 2)], { type: "application/json" });
-            const url = URL.createObjectURL(blob);
-
-            const link = document.getElementById('downloadLink');
-            const baseName = originalWorkflowName ? originalWorkflowName.replace(/\.json$/i, "") : "transformed_workflow";
-            link.href = url;
-            link.download = `${baseName}_mapped.json`;
-            link.style.display = 'block';
-            link.innerText = "Download Transformed Workflow";
+        async function downloadAllAsZip() {
+            const zip = new JSZip();
+            lastDownloadBlobs.forEach(({blob, name}) => {
+                zip.file(name, blob);
+            });
+            const content = await zip.generateAsync({type:"blob"});
+            const url = URL.createObjectURL(content);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'all_mapped_workflows.zip';
+            a.click();
         }
 
         function resetPage() {
@@ -518,12 +574,6 @@
 
         function clearLog() {
             document.getElementById('log').innerText = "";
-        }
-
-        function displayLog(messages) {
-            if (messages.length > 0) {
-                document.getElementById('log').innerText = messages.join("\n");
-            }
         }
 
         document.getElementById('workflowFile').addEventListener('change', function(event) {
