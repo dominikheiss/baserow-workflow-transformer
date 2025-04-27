@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>N8N: Baserow Workflow Transformer v1.4</title>
+    <title>N8N: Baserow Workflow Transformer v1.5</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root {
             --primary-color: #4f46e5;
@@ -17,6 +18,8 @@
             --success-color: #10b981;
             --error-color: #ef4444;
             --warning-color: #f59e0b;
+            --progress-bg: #e5e7eb;
+            --progress-fill: #4f46e5;
         }
 
         * {
@@ -58,45 +61,133 @@
             margin-bottom: 1.5rem;
             border: 2px dashed var(--border-color);
             transition: all 0.3s ease;
+            position: relative;
         }
 
-        .upload-section:hover {
+        .upload-section.drag-over {
             border-color: var(--primary-color);
+            background-color: rgba(79, 70, 229, 0.05);
         }
 
-        .upload-section label {
-            display: block;
-            font-weight: 500;
-            margin-bottom: 0.5rem;
+        .upload-section .file-info {
+            display: none;
+            margin-top: 0.5rem;
+            font-size: 0.875rem;
             color: var(--text-secondary);
         }
 
-        input[type="file"] {
-            width: 100%;
-            padding: 0.75rem;
+        .upload-section.has-file .file-info {
+            display: block;
+        }
+
+        .upload-section .file-info i {
+            margin-right: 0.5rem;
+        }
+
+        .tooltip {
+            position: relative;
+            display: inline-block;
+            margin-left: 0.5rem;
+            color: var(--text-secondary);
+            cursor: help;
+        }
+
+        .tooltip .tooltip-text {
+            visibility: hidden;
+            width: 200px;
+            background-color: var(--text-primary);
+            color: white;
+            text-align: center;
+            border-radius: 6px;
+            padding: 0.5rem;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.875rem;
+        }
+
+        .tooltip:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .progress-container {
+            display: none;
+            margin-top: 1rem;
+            background-color: var(--progress-bg);
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            width: 0%;
+            height: 0.5rem;
+            background-color: var(--progress-fill);
+            transition: width 0.3s ease;
+        }
+
+        .status-icon {
+            display: inline-block;
+            margin-right: 0.5rem;
+        }
+
+        .status-icon.success {
+            color: var(--success-color);
+        }
+
+        .status-icon.error {
+            color: var(--error-color);
+        }
+
+        .status-icon.warning {
+            color: var(--warning-color);
+        }
+
+        .dark-mode-toggle {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            background: var(--card-bg);
             border: 1px solid var(--border-color);
             border-radius: 0.5rem;
-            background: var(--card-bg);
-            margin-bottom: 1rem;
+            padding: 0.5rem;
+            cursor: pointer;
             transition: all 0.3s ease;
         }
 
-        input[type="file"]:hover {
-            border-color: var(--primary-color);
+        .dark-mode-toggle:hover {
+            background: var(--background);
         }
 
-        select {
-            width: 100%;
-            padding: 0.75rem;
-            border: 1px solid var(--border-color);
-            border-radius: 0.5rem;
-            background: var(--card-bg);
-            margin-bottom: 1rem;
-            transition: all 0.3s ease;
+        /* Dark mode styles */
+        [data-theme="dark"] {
+            --background: #1f2937;
+            --card-bg: #111827;
+            --text-primary: #f9fafb;
+            --text-secondary: #9ca3af;
+            --border-color: #374151;
+            --progress-bg: #374151;
         }
 
-        select:hover {
-            border-color: var(--primary-color);
+        /* Loading animation */
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 1rem 0;
+        }
+
+        .loading i {
+            animation: spin 1s linear infinite;
+            font-size: 1.5rem;
+            color: var(--primary-color);
         }
 
         .button-group {
@@ -216,29 +307,66 @@
     </style>
 </head>
 <body>
+    <button class="dark-mode-toggle" onclick="toggleDarkMode()">
+        <i class="fas fa-moon"></i>
+    </button>
+
     <div class="container">
-        <h1>Baserow Workflow Transformer v1.4</h1>
+        <h1>Baserow Workflow Transformer v1.5</h1>
 
-        <div class="upload-section">
-            <label>Upload Workflow JSON:</label>
+        <div class="upload-section" id="workflowUpload">
+            <label>
+                Upload Workflow JSON
+                <span class="tooltip">
+                    <i class="fas fa-info-circle"></i>
+                    <span class="tooltip-text">Upload your N8N workflow JSON file here. The file should contain your workflow configuration.</span>
+                </span>
+            </label>
             <input type="file" id="workflowFile" accept=".json">
+            <div class="file-info" id="workflowFileInfo"></div>
         </div>
 
-        <div class="upload-section">
-            <label>Upload Mapping CSV:</label>
+        <div class="upload-section" id="mappingUpload">
+            <label>
+                Upload Mapping CSV
+                <span class="tooltip">
+                    <i class="fas fa-info-circle"></i>
+                    <span class="tooltip-text">Upload your mapping CSV file here. The file should contain the ID mappings between your system and the customer's system.</span>
+                </span>
+            </label>
             <input type="file" id="mappingFile" accept=".csv">
+            <div class="file-info" id="mappingFileInfo"></div>
         </div>
 
         <div class="upload-section">
-            <label>Select Node Types to Map:</label>
+            <label>
+                Select Node Types to Map
+                <span class="tooltip">
+                    <i class="fas fa-info-circle"></i>
+                    <span class="tooltip-text">Select the node types that should be processed for ID mapping.</span>
+                </span>
+            </label>
             <select id="nodeTypes" multiple size="3">
                 <option value="n8n-nodes-base.baserow" selected>n8n-nodes-base.baserow</option>
             </select>
         </div>
 
         <div class="button-group">
-            <button onclick="startMapping()">Start Mapping</button>
-            <button onclick="resetPage()">Reset</button>
+            <button onclick="startMapping()">
+                <i class="fas fa-play"></i> Start Mapping
+            </button>
+            <button onclick="resetPage()">
+                <i class="fas fa-redo"></i> Reset
+            </button>
+        </div>
+
+        <div class="loading" id="loading">
+            <i class="fas fa-spinner"></i>
+            <p>Processing...</p>
+        </div>
+
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar" id="progressBar"></div>
         </div>
 
         <p id="status"></p>
@@ -248,7 +376,7 @@
         <div id="log"></div>
     </div>
 
-    <div class="version">v1.4</div>
+    <div class="version">v1.5</div>
 
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
     <script>
@@ -444,7 +572,99 @@
                 }
             });
         });
-    </script>
 
+        // Add drag and drop functionality
+        function setupDragAndDrop() {
+            const uploadSections = document.querySelectorAll('.upload-section');
+            
+            uploadSections.forEach(section => {
+                section.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    section.classList.add('drag-over');
+                });
+
+                section.addEventListener('dragleave', () => {
+                    section.classList.remove('drag-over');
+                });
+
+                section.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    section.classList.remove('drag-over');
+                    
+                    const file = e.dataTransfer.files[0];
+                    const input = section.querySelector('input[type="file"]');
+                    
+                    if (file) {
+                        const dataTransfer = new DataTransfer();
+                        dataTransfer.items.add(file);
+                        input.files = dataTransfer.files;
+                        input.dispatchEvent(new Event('change'));
+                    }
+                });
+            });
+        }
+
+        // Update file info display
+        function updateFileInfo(input, infoElement) {
+            if (input.files.length > 0) {
+                const file = input.files[0];
+                infoElement.innerHTML = `<i class="fas fa-file"></i> ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+                input.parentElement.classList.add('has-file');
+            } else {
+                infoElement.innerHTML = '';
+                input.parentElement.classList.remove('has-file');
+            }
+        }
+
+        // Dark mode toggle
+        function toggleDarkMode() {
+            document.body.setAttribute('data-theme', 
+                document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'
+            );
+            localStorage.setItem('theme', document.body.getAttribute('data-theme'));
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            setupDragAndDrop();
+            
+            // Set initial theme
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.body.setAttribute('data-theme', savedTheme);
+
+            // Update file info on change
+            document.getElementById('workflowFile').addEventListener('change', (e) => {
+                updateFileInfo(e.target, document.getElementById('workflowFileInfo'));
+            });
+
+            document.getElementById('mappingFile').addEventListener('change', (e) => {
+                updateFileInfo(e.target, document.getElementById('mappingFileInfo'));
+            });
+        });
+
+        // Modify startMapping function to show loading state
+        const originalStartMapping = startMapping;
+        startMapping = function() {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('progressContainer').style.display = 'block';
+            document.getElementById('progressBar').style.width = '0%';
+            
+            // Simulate progress
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                progress += 5;
+                document.getElementById('progressBar').style.width = `${progress}%`;
+                if (progress >= 100) clearInterval(progressInterval);
+            }, 100);
+
+            originalStartMapping();
+            
+            // Hide loading after completion
+            setTimeout(() => {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('progressContainer').style.display = 'none';
+            }, 1000);
+        };
+    </script>
 </body>
 </html>
