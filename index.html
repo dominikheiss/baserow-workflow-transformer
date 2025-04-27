@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>N8N: Baserow Workflow Transformer v2.0</title>
+    <title>N8N: Baserow Workflow Transformer v2.1</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -312,7 +312,7 @@
     </button>
 
     <div class="container">
-        <h1>Baserow Workflow Transformer v2.0</h1>
+        <h1>Baserow Workflow Transformer v2.1</h1>
         <div id="zipDownloadContainer"></div>
 
         <div class="upload-section" id="workflowUpload">
@@ -323,7 +323,7 @@
                     <span class="tooltip-text">Upload your N8N workflow JSON file here. The file should contain your workflow configuration.</span>
                 </span>
             </label>
-            <input type="file" id="workflowFile" accept=".json">
+            <input type="file" id="workflowFile" accept=".json" multiple>
             <div class="file-info" id="workflowFileInfo"></div>
         </div>
 
@@ -377,7 +377,7 @@
         <div id="log"></div>
     </div>
 
-    <div class="version">v2.0</div>
+    <div class="version">v2.1</div>
 
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -386,6 +386,7 @@
         let mappingData = null;
         let originalWorkflowName = "";
         let lastDownloadBlobs = [];
+        let workflowNames = [];
 
         function isLikelyExpression(val) {
             return typeof val === 'string' && val.trim().startsWith('={{');
@@ -522,11 +523,12 @@
                 if (unmappedUsed.length > 0) {
                     errorLog.push("IDs im Workflow gefunden, aber nicht gemappt (obwohl in Mapping-CSV): " + unmappedUsed.join(", "));
                 }
-                allLogs.push(`<h3>Workflow ${idx+1}: ${originalWorkflowName || 'Workflow'} </h3>` + errorLog.join('<br>'));
+                const wfName = workflowNames[idx] || originalWorkflowName || `Workflow_${idx+1}`;
+                allLogs.push(`<h3>Workflow ${idx+1}: ${wfName} </h3>` + errorLog.join('<br>'));
                 allErrorGroups.push(errorGroups);
                 const blob = new Blob([JSON.stringify(updatedWorkflow, null, 2)], { type: "application/json" });
                 allBlobs.push(blob);
-                allNames.push((originalWorkflowName ? originalWorkflowName.replace(/\.json$/i, "") : "transformed_workflow") + `_mapped_${idx+1}.json`);
+                allNames.push((wfName ? wfName.replace(/\.json$/i, "") : "transformed_workflow") + `_mapped.json`);
             });
             // Download-Links
             const downloadLinks = allBlobs.map((blob, i) => {
@@ -576,19 +578,36 @@
             document.getElementById('log').innerText = "";
         }
 
+        document.getElementById('workflowFile').setAttribute('multiple', 'multiple');
         document.getElementById('workflowFile').addEventListener('change', function(event) {
-            const file = event.target.files[0];
-            originalWorkflowName = file.name;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    workflowData = JSON.parse(e.target.result);
-                    updateStatus("Workflow JSON loaded.", "green");
-                } catch {
-                    updateStatus("Error parsing Workflow JSON!", "red");
-                }
-            };
-            reader.readAsText(file);
+            const files = Array.from(event.target.files);
+            workflowNames = files.map(f => f.name);
+            if (files.length === 0) {
+                workflowData = null;
+                updateStatus("No workflow file(s) selected.", "red");
+                return;
+            }
+            let loaded = 0;
+            let allData = [];
+            let error = false;
+            files.forEach((file, idx) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        allData[idx] = JSON.parse(e.target.result);
+                    } catch {
+                        error = true;
+                        updateStatus(`Error parsing Workflow JSON: ${file.name}!`, "red");
+                    }
+                    loaded++;
+                    if (loaded === files.length && !error) {
+                        workflowData = allData;
+                        originalWorkflowName = files.length === 1 ? files[0].name : '';
+                        updateStatus(`${files.length} Workflow JSONs loaded.`, "green");
+                    }
+                };
+                reader.readAsText(file);
+            });
         });
 
         document.getElementById('mappingFile').addEventListener('change', function(event) {
