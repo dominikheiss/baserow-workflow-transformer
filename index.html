@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>N8N: Baserow Workflow Transformer v2.2</title>
+    <title>N8N: Baserow Workflow Transformer v2.3</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -304,6 +304,26 @@
         #log::-webkit-scrollbar-thumb:hover {
             background: var(--text-secondary);
         }
+
+        .modern-select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1.5px solid #4f46e5;
+            border-radius: 0.5rem;
+            background: #f9fafb;
+            margin-bottom: 1rem;
+            font-size: 1rem;
+            color: #111827;
+            transition: border 0.2s;
+            box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.03);
+        }
+        .modern-select:focus {
+            border: 2px solid #10b981;
+            outline: none;
+        }
+        .modern-select option {
+            padding: 0.5rem;
+        }
     </style>
 </head>
 <body>
@@ -312,25 +332,18 @@
     </button>
 
     <div class="container">
-        <h1>Baserow Workflow Transformer v2.2</h1>
+        <h1>Baserow Workflow Transformer v2.3</h1>
         <div id="dropArea" class="upload-section" style="border: 2px dashed #4f46e5; text-align:center; margin-bottom:1rem; cursor:pointer;">
-            <b>Dateien hierher ziehen oder klicken, um auszuwählen</b>
+            <b>Workflows hierher ziehen oder klicken, um auszuwählen</b>
             <input type="file" id="workflowFile" accept=".json" multiple style="display:none;">
             <div id="fileList"></div>
         </div>
-        <div id="zipDownloadContainer"></div>
-
-        <div class="upload-section" id="mappingUpload">
-            <label>
-                Upload Mapping CSV
-                <span class="tooltip">
-                    <i class="fas fa-info-circle"></i>
-                    <span class="tooltip-text">Upload your mapping CSV file here. The file should contain the ID mappings between your system and the customer's system.</span>
-                </span>
-            </label>
-            <input type="file" id="mappingFile" accept=".csv">
-            <div class="file-info" id="mappingFileInfo"></div>
+        <div id="csvDropArea" class="upload-section" style="border: 2px dashed #10b981; text-align:center; margin-bottom:1rem; cursor:pointer;">
+            <b>Mapping CSV hierher ziehen oder klicken, um auszuwählen</b>
+            <input type="file" id="mappingFile" accept=".csv" style="display:none;">
+            <div id="csvFileList"></div>
         </div>
+        <div id="zipDownloadContainer"></div>
 
         <div class="upload-section">
             <label>
@@ -340,8 +353,8 @@
                     <span class="tooltip-text">Select the node types that should be processed for ID mapping.</span>
                 </span>
             </label>
-            <select id="nodeTypes" multiple size="3">
-                <option value="n8n-nodes-base.baserow" selected>n8n-nodes-base.baserow</option>
+            <select id="nodeTypes" multiple size="3" class="modern-select">
+                <option value="n8n-nodes-base.baserow" selected>🗄️ n8n-nodes-base.baserow</option>
             </select>
         </div>
 
@@ -370,7 +383,7 @@
         <div id="log"></div>
     </div>
 
-    <div class="version">v2.2</div>
+    <div class="version">v2.3</div>
 
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -381,8 +394,9 @@
         let lastDownloadBlobs = [];
         let workflowNames = [];
         let selectedFiles = [];
+        let selectedCSV = null;
 
-        // --- Drag & Drop + File List ---
+        // --- Drag & Drop + File List for Workflows ---
         const dropArea = document.getElementById('dropArea');
         const workflowInput = document.getElementById('workflowFile');
         const fileListDiv = document.getElementById('fileList');
@@ -455,6 +469,63 @@
                     }
                 };
                 reader.readAsText(file);
+            });
+        }
+
+        // --- Drag & Drop + File List for Mapping CSV ---
+        const csvDropArea = document.getElementById('csvDropArea');
+        const csvInput = document.getElementById('mappingFile');
+        const csvFileListDiv = document.getElementById('csvFileList');
+
+        csvDropArea.addEventListener('click', () => csvInput.click());
+        csvDropArea.addEventListener('dragover', e => {
+            e.preventDefault();
+            csvDropArea.style.background = '#d1fae5';
+        });
+        csvDropArea.addEventListener('dragleave', e => {
+            e.preventDefault();
+            csvDropArea.style.background = '';
+        });
+        csvDropArea.addEventListener('drop', e => {
+            e.preventDefault();
+            csvDropArea.style.background = '';
+            handleCSV(Array.from(e.dataTransfer.files));
+        });
+        csvInput.addEventListener('change', e => {
+            handleCSV(Array.from(e.target.files));
+        });
+
+        function handleCSV(files) {
+            if (!files.length) return;
+            selectedCSV = files[0];
+            renderCSVFileList();
+            loadCSVFile();
+        }
+        function renderCSVFileList() {
+            csvFileListDiv.innerHTML = selectedCSV ?
+                `<div style='display:flex;align-items:center;gap:8px;'>
+                    <span>${selectedCSV.name}</span>
+                    <button onclick='removeCSV()' style='color:red;background:none;border:none;cursor:pointer;'>✖</button>
+                </div>` : '';
+        }
+        window.removeCSV = function() {
+            selectedCSV = null;
+            renderCSVFileList();
+            mappingData = null;
+            document.getElementById('mappingFile').value = '';
+            updateStatus("Mapping CSV entfernt.", "orange");
+        }
+        function loadCSVFile() {
+            if (!selectedCSV) return;
+            Papa.parse(selectedCSV, {
+                header: true,
+                complete: function(results) {
+                    mappingData = results;
+                    updateStatus("Mapping CSV loaded.", "green");
+                },
+                error: function() {
+                    updateStatus("Error parsing Mapping CSV!", "red");
+                }
             });
         }
 
@@ -669,6 +740,7 @@
             mappingData = null;
             originalWorkflowName = "";
             selectedFiles = [];
+            selectedCSV = null;
             document.getElementById('workflowFile').value = "";
             document.getElementById('mappingFile').value = "";
             document.getElementById('status').innerText = "";
