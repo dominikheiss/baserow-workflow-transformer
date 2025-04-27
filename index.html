@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>N8N: Baserow Workflow Transformer v1.8</title>
+    <title>N8N: Baserow Workflow Transformer v1.9</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -312,7 +312,7 @@
     </button>
 
     <div class="container">
-        <h1>Baserow Workflow Transformer v1.8</h1>
+        <h1>Baserow Workflow Transformer v1.9</h1>
 
         <div class="upload-section" id="workflowUpload">
             <label>
@@ -376,7 +376,7 @@
         <div id="log"></div>
     </div>
 
-    <div class="version">v1.8</div>
+    <div class="version">v1.9</div>
 
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
     <script>
@@ -409,7 +409,22 @@
 
             const updatedWorkflow = JSON.parse(JSON.stringify(workflowData));
             const mappedResults = [];
+            const unmappedIds = new Set();
             let nodeChanges = 0;
+
+            function collectIds(obj) {
+                if (Array.isArray(obj)) {
+                    obj.forEach(collectIds);
+                } else if (obj && typeof obj === 'object') {
+                    for (const key in obj) {
+                        const value = obj[key];
+                        if (typeof value === 'string' || typeof value === 'number') {
+                            unmappedIds.add(value.toString());
+                        }
+                        collectIds(value);
+                    }
+                }
+            }
 
             if (updatedWorkflow.nodes && Array.isArray(updatedWorkflow.nodes)) {
                 updatedWorkflow.nodes = updatedWorkflow.nodes.map(node => {
@@ -440,6 +455,7 @@
                         return obj;
                     }
 
+                    collectIds(updatedNode.parameters);
                     deepReplace(updatedNode.parameters);
 
                     if (changesInNode > 0) {
@@ -450,13 +466,26 @@
                 });
             }
 
+            const mappedIds = new Set(Object.keys(idMap));
+            const actuallyMapped = new Set(mappedResults.map(msg => msg.match(/\b(\d+)\b →/)).filter(Boolean).map(m => m[1]));
+            const unmappedUsed = Array.from(unmappedIds).filter(id => mappedIds.has(id) && !actuallyMapped.has(id));
+            const notInMapping = Array.from(unmappedIds).filter(id => !mappedIds.has(id));
+
+            let errorLog = [];
+            if (unmappedUsed.length > 0) {
+                errorLog.push("IDs im Workflow gefunden, aber nicht gemappt (obwohl in Mapping-CSV): " + unmappedUsed.join(", "));
+            }
+            if (notInMapping.length > 0) {
+                errorLog.push("IDs im Workflow gefunden, aber nicht in Mapping-CSV vorhanden: " + notInMapping.join(", "));
+            }
+
             if (mappedResults.length === 0) {
                 updateStatus("No matching IDs found. Nothing mapped.", "orange");
             } else {
                 updateStatus(`Mapping completed. ${mappedResults.length} IDs mapped across ${nodeChanges} nodes.`, "green");
             }
 
-            displayLog(mappedResults);
+            displayLog(mappedResults.concat(errorLog));
 
             const blob = new Blob([JSON.stringify(updatedWorkflow, null, 2)], { type: "application/json" });
             const url = URL.createObjectURL(blob);
