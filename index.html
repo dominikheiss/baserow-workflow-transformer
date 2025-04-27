@@ -2,66 +2,253 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>N8N: Baserow Workflow Transformer v1.3</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --primary-color: #4f46e5;
+            --primary-hover: #4338ca;
+            --background: #f9fafb;
+            --card-bg: #ffffff;
+            --text-primary: #111827;
+            --text-secondary: #6b7280;
+            --border-color: #e5e7eb;
+            --success-color: #10b981;
+            --error-color: #ef4444;
+            --warning-color: #f59e0b;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--background);
+            color: var(--text-primary);
+            line-height: 1.5;
+            min-height: 100vh;
+            padding: 2rem;
         }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+
         h1 {
-            color: #333;
+            color: var(--text-primary);
+            font-size: 1.875rem;
+            font-weight: 600;
+            margin-bottom: 2rem;
+            text-align: center;
         }
-        input, select, button {
-            margin-bottom: 15px;
-            padding: 8px;
-            width: 300px;
-            max-width: 90%;
+
+        .upload-section {
+            background: var(--background);
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            margin-bottom: 1.5rem;
+            border: 2px dashed var(--border-color);
+            transition: all 0.3s ease;
         }
+
+        .upload-section:hover {
+            border-color: var(--primary-color);
+        }
+
+        .upload-section label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            color: var(--text-secondary);
+        }
+
+        input[type="file"] {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            background: var(--card-bg);
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        input[type="file"]:hover {
+            border-color: var(--primary-color);
+        }
+
+        select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            background: var(--card-bg);
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        select:hover {
+            border-color: var(--primary-color);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        button {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            flex: 1;
+        }
+
+        button:first-child {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        button:first-child:hover {
+            background-color: var(--primary-hover);
+        }
+
+        button:last-child {
+            background-color: var(--background);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        button:last-child:hover {
+            background-color: var(--border-color);
+        }
+
         #status {
-            margin-top: 20px;
-            font-weight: bold;
+            margin-top: 1.5rem;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            text-align: center;
+            transition: all 0.3s ease;
         }
+
+        #downloadLink {
+            display: none;
+            margin-top: 1rem;
+            padding: 0.75rem 1.5rem;
+            background-color: var(--success-color);
+            color: white;
+            text-decoration: none;
+            border-radius: 0.5rem;
+            text-align: center;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        #downloadLink:hover {
+            opacity: 0.9;
+        }
+
         #log {
-            margin-top: 20px;
-            white-space: pre-wrap;
-            background-color: #f4f4f4;
-            padding: 10px;
-            border-radius: 5px;
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background-color: var(--background);
+            border-radius: 0.5rem;
+            font-family: monospace;
+            font-size: 0.875rem;
             max-height: 300px;
             overflow-y: auto;
+            white-space: pre-wrap;
+            border: 1px solid var(--border-color);
         }
-        #buttons {
-            margin-top: 10px;
+
+        .version {
+            position: fixed;
+            bottom: 1rem;
+            right: 1rem;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            background: var(--card-bg);
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+        }
+
+        /* Animation for status messages */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        #status {
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        /* Custom scrollbar */
+        #log::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #log::-webkit-scrollbar-track {
+            background: var(--background);
+            border-radius: 4px;
+        }
+
+        #log::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+
+        #log::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
         }
     </style>
 </head>
 <body>
+    <div class="container">
+        <h1>Baserow Workflow Transformer v1.3</h1>
 
-    <h1>Baserow Workflow Transformer v1.3</h1>
+        <div class="upload-section">
+            <label>Upload Workflow JSON:</label>
+            <input type="file" id="workflowFile" accept=".json">
+        </div>
 
-    <label>Upload Workflow JSON:</label><br>
-    <input type="file" id="workflowFile" accept=".json"><br>
+        <div class="upload-section">
+            <label>Upload Mapping CSV:</label>
+            <input type="file" id="mappingFile" accept=".csv">
+        </div>
 
-    <label>Upload Mapping CSV:</label><br>
-    <input type="file" id="mappingFile" accept=".csv"><br>
+        <div class="upload-section">
+            <label>Select Node Types to Map:</label>
+            <select id="nodeTypes" multiple size="3">
+                <option value="n8n-nodes-base.baserow" selected>n8n-nodes-base.baserow</option>
+            </select>
+        </div>
 
-    <label>Select Node Types to Map:</label><br>
-    <select id="nodeTypes" multiple size="3">
-        <option value="n8n-nodes-base.baserow" selected>n8n-nodes-base.baserow</option>
-    </select><br>
+        <div class="button-group">
+            <button onclick="startMapping()">Start Mapping</button>
+            <button onclick="resetPage()">Reset</button>
+        </div>
 
-    <div id="buttons">
-        <button onclick="startMapping()">Start Mapping</button>
-        <button onclick="resetPage()">Reset</button>
+        <p id="status"></p>
+
+        <a id="downloadLink">Download Transformed Workflow</a>
+
+        <div id="log"></div>
     </div>
 
-    <p id="status"></p>
-
-    <a id="downloadLink" style="display:none;">Download Transformed Workflow</a>
-
-    <div id="log"></div>
-
-    <p style="position: fixed; bottom: 10px; right: 10px; font-size: 12px; color: gray;">v1.3</p>
+    <div class="version">v1.3</div>
 
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
     <script>
