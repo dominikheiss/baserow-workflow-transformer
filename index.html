@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>N8N: Baserow Workflow Transformer v2.1</title>
+    <title>N8N: Baserow Workflow Transformer v2.2</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -312,20 +312,13 @@
     </button>
 
     <div class="container">
-        <h1>Baserow Workflow Transformer v2.1</h1>
-        <div id="zipDownloadContainer"></div>
-
-        <div class="upload-section" id="workflowUpload">
-            <label>
-                Upload Workflow JSON
-                <span class="tooltip">
-                    <i class="fas fa-info-circle"></i>
-                    <span class="tooltip-text">Upload your N8N workflow JSON file here. The file should contain your workflow configuration.</span>
-                </span>
-            </label>
-            <input type="file" id="workflowFile" accept=".json" multiple>
-            <div class="file-info" id="workflowFileInfo"></div>
+        <h1>Baserow Workflow Transformer v2.2</h1>
+        <div id="dropArea" class="upload-section" style="border: 2px dashed #4f46e5; text-align:center; margin-bottom:1rem; cursor:pointer;">
+            <b>Dateien hierher ziehen oder klicken, um auszuwählen</b>
+            <input type="file" id="workflowFile" accept=".json" multiple style="display:none;">
+            <div id="fileList"></div>
         </div>
+        <div id="zipDownloadContainer"></div>
 
         <div class="upload-section" id="mappingUpload">
             <label>
@@ -377,7 +370,7 @@
         <div id="log"></div>
     </div>
 
-    <div class="version">v2.1</div>
+    <div class="version">v2.2</div>
 
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -387,6 +380,83 @@
         let originalWorkflowName = "";
         let lastDownloadBlobs = [];
         let workflowNames = [];
+        let selectedFiles = [];
+
+        // --- Drag & Drop + File List ---
+        const dropArea = document.getElementById('dropArea');
+        const workflowInput = document.getElementById('workflowFile');
+        const fileListDiv = document.getElementById('fileList');
+
+        dropArea.addEventListener('click', () => workflowInput.click());
+        dropArea.addEventListener('dragover', e => {
+            e.preventDefault();
+            dropArea.style.background = '#e0e7ff';
+        });
+        dropArea.addEventListener('dragleave', e => {
+            e.preventDefault();
+            dropArea.style.background = '';
+        });
+        dropArea.addEventListener('drop', e => {
+            e.preventDefault();
+            dropArea.style.background = '';
+            handleFiles(Array.from(e.dataTransfer.files));
+        });
+        workflowInput.addEventListener('change', e => {
+            handleFiles(Array.from(e.target.files));
+        });
+
+        function handleFiles(files) {
+            // Add new files, avoid duplicates
+            files.forEach(f => {
+                if (!selectedFiles.some(sf => sf.name === f.name && sf.size === f.size)) {
+                    selectedFiles.push(f);
+                }
+            });
+            renderFileList();
+            loadAllFiles();
+        }
+        function renderFileList() {
+            fileListDiv.innerHTML = selectedFiles.map((f, i) =>
+                `<div style='display:flex;align-items:center;gap:8px;'>
+                    <span>${f.name}</span>
+                    <button onclick='removeFile(${i})' style='color:red;background:none;border:none;cursor:pointer;'>✖</button>
+                </div>`
+            ).join('');
+        }
+        window.removeFile = function(idx) {
+            selectedFiles.splice(idx, 1);
+            renderFileList();
+            loadAllFiles();
+        }
+        function loadAllFiles() {
+            workflowNames = selectedFiles.map(f => f.name);
+            if (selectedFiles.length === 0) {
+                workflowData = null;
+                updateStatus("No workflow file(s) selected.", "red");
+                return;
+            }
+            let loaded = 0;
+            let allData = [];
+            let error = false;
+            selectedFiles.forEach((file, idx) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        allData[idx] = JSON.parse(e.target.result);
+                    } catch {
+                        error = true;
+                        updateStatus(`Error parsing Workflow JSON: ${file.name}!`, "red");
+                    }
+                    loaded++;
+                    if (loaded === selectedFiles.length && !error) {
+                        workflowData = allData;
+                        originalWorkflowName = selectedFiles.length === 1 ? selectedFiles[0].name : '';
+                        updateStatus(`${selectedFiles.length} Workflow JSONs loaded.`, "green");
+                    }
+                };
+                reader.readAsText(file);
+            });
+        }
 
         function isLikelyExpression(val) {
             return typeof val === 'string' && val.trim().startsWith('={{');
@@ -410,19 +480,39 @@
             return groups;
         }
 
-        function displayLog(messages, errorGroups) {
+        function showToast(msg, color) {
+            let toast = document.createElement('div');
+            toast.innerText = msg;
+            toast.style.position = 'fixed';
+            toast.style.bottom = '30px';
+            toast.style.left = '50%';
+            toast.style.transform = 'translateX(-50%)';
+            toast.style.background = color || '#4f46e5';
+            toast.style.color = 'white';
+            toast.style.padding = '12px 24px';
+            toast.style.borderRadius = '8px';
+            toast.style.fontWeight = 'bold';
+            toast.style.zIndex = 9999;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 2000);
+        }
+
+        function displayLog(messages, errorGroups, details) {
             const logDiv = document.getElementById('log');
             let html = '';
             if (messages.length > 0) {
                 html += '<ul>' + messages.map(msg => `<li>${msg}</li>`).join('') + '</ul>';
             }
             if (errorGroups) {
-                html += '<h4>Unmapped IDs:</h4>';
+                html += '<h4 style="color:#f59e0b;">Unmapped IDs:</h4>';
                 Object.entries(errorGroups).forEach(([type, arr]) => {
                     if (arr.length > 0) {
-                        html += `<b>${type}:</b> <ul>` + arr.map(id => `<li>${id}</li>`).join('') + '</ul>';
+                        html += `<b>${type}:</b> <ul style='background:#fffbe6;'>` + arr.map(id => `<li>${id}</li>`).join('') + '</ul>';
                     }
                 });
+            }
+            if (details && details.length > 0) {
+                html += `<details open><summary style='font-weight:bold;margin-top:10px;'>Mapping-Details anzeigen</summary><ul>` + details.map(d => `<li>${d}</li>`).join('') + '</ul></details>';
             }
             logDiv.innerHTML = html;
         }
@@ -443,15 +533,25 @@
                 return;
             }
 
+            // Fortschritt/Status
+            updateStatus("Mapping läuft...", "#4f46e5");
+            document.getElementById('progressContainer').style.display = 'block';
+            document.getElementById('progressBar').style.width = '0%';
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                progress += 100 / (selectedFiles.length || 1);
+                document.getElementById('progressBar').style.width = `${Math.min(progress,100)}%`;
+            }, 200);
+
             // Multi-Workflow-Unterstützung
             const workflows = Array.isArray(workflowData) ? workflowData : [workflowData];
             let allLogs = [];
             let allErrorGroups = [];
             let allBlobs = [];
             let allNames = [];
+            let allDetails = [];
 
             workflows.forEach((wf, idx) => {
-                updateStatus(`Mapping started... (${idx+1}/${workflows.length})`, "black");
                 const idMap = {};
                 for (const row of mappingData.data) {
                     if (row.your_id && row.customer_id) {
@@ -491,7 +591,7 @@
                                     if (typeof value === 'string' || typeof value === 'number') {
                                         const idStr = value.toString();
                                         if (idMap.hasOwnProperty(idStr)) {
-                                            mappedResults.push(`Node ${node.name || node.id}: ${key} ${idStr} → ${idMap[idStr]}`);
+                                            mappedResults.push(`Node <b>${node.name || node.id}</b>: <b>${key}</b> <span style='color:#f59e0b;'>${idStr}</span> → <span style='color:#10b981;'>${idMap[idStr]}</span>`);
                                             obj[key] = (typeof value === 'number') ? parseInt(idMap[idStr]) : idMap[idStr];
                                             changesInNode++;
                                         }
@@ -510,7 +610,10 @@
                     });
                 }
                 const mappedIds = new Set(Object.keys(idMap));
-                const actuallyMapped = new Set(mappedResults.map(msg => msg.match(/\b(\d+)\b →/)).filter(Boolean).map(m => m[1]));
+                const actuallyMapped = new Set(mappedResults.map(msg => {
+                    const m = msg.match(/>(\d+)</);
+                    return m ? m[1] : null;
+                }).filter(Boolean));
                 const unmappedUsed = Array.from(unmappedIds).filter(id => mappedIds.has(id) && !actuallyMapped.has(id));
                 const notInMapping = Array.from(unmappedIds).filter(id => !mappedIds.has(id));
                 const errorGroups = groupUnmapped(notInMapping);
@@ -526,6 +629,7 @@
                 const wfName = workflowNames[idx] || originalWorkflowName || `Workflow_${idx+1}`;
                 allLogs.push(`<h3>Workflow ${idx+1}: ${wfName} </h3>` + errorLog.join('<br>'));
                 allErrorGroups.push(errorGroups);
+                allDetails.push(mappedResults);
                 const blob = new Blob([JSON.stringify(updatedWorkflow, null, 2)], { type: "application/json" });
                 allBlobs.push(blob);
                 allNames.push((wfName ? wfName.replace(/\.json$/i, "") : "transformed_workflow") + `_mapped.json`);
@@ -539,8 +643,12 @@
             document.getElementById('zipDownloadContainer').innerHTML = downloadLinks +
                 '<button onclick="downloadAllAsZip()" style="margin-left:20px;">Alle als ZIP herunterladen</button>';
             // Log-Ausgabe
-            displayLog(allLogs, allErrorGroups[0]);
+            displayLog(allLogs, allErrorGroups[0], allDetails.flat());
             lastDownloadBlobs = allBlobs.map((blob, i) => ({blob, name: allNames[i]}));
+            clearInterval(progressInterval);
+            document.getElementById('progressContainer').style.display = 'none';
+            updateStatus('Mapping abgeschlossen! ✔️', '#10b981');
+            showToast('Mapping erfolgreich!', '#10b981');
         }
 
         async function downloadAllAsZip() {
@@ -560,6 +668,7 @@
             workflowData = null;
             mappingData = null;
             originalWorkflowName = "";
+            selectedFiles = [];
             document.getElementById('workflowFile').value = "";
             document.getElementById('mappingFile').value = "";
             document.getElementById('status').innerText = "";
