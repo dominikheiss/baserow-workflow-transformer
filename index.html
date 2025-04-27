@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>N8N: Baserow Workflow Transformer v2.8</title>
+    <title>N8N: Baserow Workflow Transformer v2.9</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -356,7 +356,7 @@
     </button>
 
     <div class="container">
-        <h1>Baserow Workflow Transformer v2.8</h1>
+        <h1>Baserow Workflow Transformer v2.9</h1>
         <div id="dropArea" class="upload-section" style="border: 2px dashed #4f46e5; text-align:center; margin-bottom:1rem; cursor:pointer;">
             <b>Workflows hierher ziehen oder klicken, um auszuwählen</b>
             <input type="file" id="workflowFile" accept=".json" multiple style="display:none;">
@@ -412,7 +412,7 @@
         </div>
     </div>
 
-    <div class="version">v2.8</div>
+    <div class="version">v2.9</div>
 
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -444,7 +444,14 @@
         dropArea.addEventListener('drop', e => {
             e.preventDefault();
             dropArea.style.background = '';
-            handleFiles(Array.from(e.dataTransfer.files));
+            const files = Array.from(e.dataTransfer.files);
+            if (files.length > 1) {
+                console.log('Drag&Drop: Anzahl Dateien:', files.length);
+            }
+            handleFiles(files);
+            if (files.length > 1 && selectedFiles.length === 1) {
+                showToast('Warnung: Ihr Browser hat nur eine Datei übernommen. Multi-Drag&Drop wird evtl. nicht unterstützt.', '#f59e0b');
+            }
         });
         workflowInput.addEventListener('change', e => {
             handleFiles(Array.from(e.target.files));
@@ -521,10 +528,21 @@
         csvDropArea.addEventListener('drop', e => {
             e.preventDefault();
             csvDropArea.style.background = '';
-            handleCSV(Array.from(e.dataTransfer.files));
+            const files = Array.from(e.dataTransfer.files);
+            if (files.length > 0 && !files[0].name.toLowerCase().endsWith('.csv')) {
+                showToast('Nur CSV-Dateien erlaubt!', '#ef4444');
+                return;
+            }
+            handleCSV(files);
         });
         csvInput.addEventListener('change', e => {
-            handleCSV(Array.from(e.target.files));
+            const files = Array.from(e.target.files);
+            if (files.length > 0 && !files[0].name.toLowerCase().endsWith('.csv')) {
+                showToast('Nur CSV-Dateien erlaubt!', '#ef4444');
+                csvInput.value = '';
+                return;
+            }
+            handleCSV(files);
         });
 
         function handleCSV(files) {
