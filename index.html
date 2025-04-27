@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>N8N: Baserow Workflow Transformer v2.4</title>
+    <title>N8N: Baserow Workflow Transformer v2.6</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -232,15 +232,15 @@
             font-weight: 500;
             text-align: center;
             transition: all 0.3s ease;
-            background: #fff;
-            color: #111827;
+            background: #fff !important;
+            color: #111827 !important;
             box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.03);
         }
 
         [data-theme="dark"] #status {
-            background: #22223b;
-            color: #f9fafb;
-            border: 1px solid #374151;
+            background: #181a2a !important;
+            color: #f9fafb !important;
+            border: 1px solid #10b981 !important;
         }
 
         #downloadLink {
@@ -333,6 +333,13 @@
         .modern-select option {
             padding: 0.5rem;
         }
+        .debug-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            font-size: 1rem;
+        }
     </style>
 </head>
 <body>
@@ -341,7 +348,7 @@
     </button>
 
     <div class="container">
-        <h1>Baserow Workflow Transformer v2.4</h1>
+        <h1>Baserow Workflow Transformer v2.6</h1>
         <div id="dropArea" class="upload-section" style="border: 2px dashed #4f46e5; text-align:center; margin-bottom:1rem; cursor:pointer;">
             <b>Workflows hierher ziehen oder klicken, um auszuwählen</b>
             <input type="file" id="workflowFile" accept=".json" multiple style="display:none;">
@@ -390,9 +397,14 @@
         <a id="downloadLink">Download Transformed Workflow</a>
 
         <div id="log"></div>
+
+        <div class="debug-toggle">
+            <input type="checkbox" id="debugToggle">
+            <label for="debugToggle">Debug-Log anzeigen</label>
+        </div>
     </div>
 
-    <div class="version">v2.4</div>
+    <div class="version">v2.6</div>
 
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -404,6 +416,7 @@
         let workflowNames = [];
         let selectedFiles = [];
         let selectedCSV = null;
+        let debugMode = false;
 
         // --- Drag & Drop + File List for Workflows ---
         const dropArea = document.getElementById('dropArea');
@@ -429,7 +442,10 @@
         });
 
         function handleFiles(files) {
-            // Add new files, avoid duplicates
+            // Reset, wenn neue Dateien kommen
+            if (files.length > 0) {
+                selectedFiles = [];
+            }
             files.forEach(f => {
                 if (!selectedFiles.some(sf => sf.name === f.name && sf.size === f.size)) {
                     selectedFiles.push(f);
@@ -538,6 +554,11 @@
             });
         }
 
+        // Debug-Option
+        document.getElementById('debugToggle').addEventListener('change', function(e) {
+            debugMode = e.target.checked;
+        });
+
         function isLikelyExpression(val) {
             return typeof val === 'string' && val.trim().startsWith('={{');
         }
@@ -577,7 +598,7 @@
             setTimeout(() => toast.remove(), 2000);
         }
 
-        function displayLog(messages, errorGroups, details) {
+        function displayLog(messages, errorGroups, details, debugLogs) {
             const logDiv = document.getElementById('log');
             let html = '';
             if (messages.length > 0) {
@@ -593,6 +614,9 @@
             }
             if (details && details.length > 0) {
                 html += `<details open><summary style='font-weight:bold;margin-top:10px;'>Mapping-Details anzeigen</summary><ul>` + details.map(d => `<li>${d}</li>`).join('') + '</ul></details>';
+            }
+            if (debugMode && debugLogs && debugLogs.length > 0) {
+                html += debugLogs.join('');
             }
             logDiv.innerHTML = html;
         }
@@ -630,6 +654,7 @@
             let allBlobs = [];
             let allNames = [];
             let allDetails = [];
+            let allDebugLogs = [];
 
             workflows.forEach((wf, idx) => {
                 const idMap = {};
@@ -642,6 +667,7 @@
                 const mappedResults = [];
                 const unmappedIds = new Set();
                 let nodeChanges = 0;
+                let foundIds = new Set();
                 function collectIds(obj) {
                     if (Array.isArray(obj)) {
                         obj.forEach(collectIds);
@@ -650,6 +676,7 @@
                             const value = obj[key];
                             if (typeof value === 'string' || typeof value === 'number') {
                                 unmappedIds.add(value.toString());
+                                foundIds.add(value.toString());
                             }
                             collectIds(value);
                         }
@@ -713,6 +740,11 @@
                 const blob = new Blob([JSON.stringify(updatedWorkflow, null, 2)], { type: "application/json" });
                 allBlobs.push(blob);
                 allNames.push((wfName ? wfName.replace(/\.json$/i, "") : "transformed_workflow") + `_mapped.json`);
+                if (debugMode) {
+                    allDebugLogs.push(`<details open><summary style='font-weight:bold;color:#10b981;'>Debug-Log für ${wfName}</summary>` +
+                        `<b>Alle gefundenen IDs im Workflow:</b><br><code style='font-size:0.9em;'>${Array.from(foundIds).join(', ')}</code><br>` +
+                        `<b>Alle your_id aus Mapping-CSV:</b><br><code style='font-size:0.9em;'>${Object.keys(idMap).join(', ')}</code></details>`);
+                }
             });
             // Download-Links
             const downloadLinks = allBlobs.map((blob, i) => {
@@ -723,7 +755,7 @@
             document.getElementById('zipDownloadContainer').innerHTML = downloadLinks +
                 '<button onclick="downloadAllAsZip()" style="margin-left:20px;">Alle als ZIP herunterladen</button>';
             // Log-Ausgabe
-            displayLog(allLogs, allErrorGroups[0], allDetails.flat());
+            displayLog(allLogs, allErrorGroups[0], allDetails.flat(), allDebugLogs);
             lastDownloadBlobs = allBlobs.map((blob, i) => ({blob, name: allNames[i]}));
             clearInterval(progressInterval);
             document.getElementById('progressContainer').style.display = 'none';
@@ -750,11 +782,16 @@
             originalWorkflowName = "";
             selectedFiles = [];
             selectedCSV = null;
+            workflowNames = [];
+            lastDownloadBlobs = [];
             document.getElementById('workflowFile').value = "";
             document.getElementById('mappingFile').value = "";
+            document.getElementById('fileList').innerHTML = "";
+            document.getElementById('csvFileList').innerHTML = "";
             document.getElementById('status').innerText = "";
             document.getElementById('log').innerText = "";
-            document.getElementById('downloadLink').style.display = 'none';
+            document.getElementById('zipDownloadContainer').innerHTML = '';
+            document.getElementById('progressContainer').style.display = 'none';
             updateStatus("Page reset. Upload new files.", "black");
         }
 
