@@ -2,50 +2,88 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Baserow Workflow Transformer</title>
+    <title>Baserow Workflow Transformer v1.2</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        input, select, button {
+            margin-bottom: 15px;
+            padding: 8px;
+            width: 300px;
+            max-width: 90%;
+        }
+        #status {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+        #log {
+            margin-top: 20px;
+            white-space: pre-wrap;
+            background-color: #f4f4f4;
+            padding: 10px;
+            border-radius: 5px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        #buttons {
+            margin-top: 10px;
+        }
+    </style>
 </head>
 <body>
-    <h1>Baserow Workflow Transformer</h1>
 
-    <p>Upload your files:</p>
+    <h1>Baserow Workflow Transformer v1.2</h1>
 
     <label>Upload Workflow JSON:</label><br>
-    <input type="file" id="workflowFile" accept=".json"><br><br>
+    <input type="file" id="workflowFile" accept=".json"><br>
 
     <label>Upload Mapping CSV:</label><br>
-    <input type="file" id="mappingFile" accept=".csv"><br><br>
+    <input type="file" id="mappingFile" accept=".csv"><br>
 
     <label>Select Node Types to Map:</label><br>
     <select id="nodeTypes" multiple size="3">
-        <option value="n8n-nodes-base.baserow">n8n-nodes-base.baserow</option>
-    </select><br><br>
+        <option value="n8n-nodes-base.baserow" selected>n8n-nodes-base.baserow</option>
+    </select><br>
 
-    <button onclick="startMapping()">Start Mapping</button>
+    <div id="buttons">
+        <button onclick="startMapping()">Start Mapping</button>
+        <button onclick="resetPage()">Reset</button>
+    </div>
 
     <p id="status"></p>
 
     <a id="downloadLink" style="display:none;">Download Transformed Workflow</a>
 
-    <!-- Versionsanzeige -->
-    <p style="position: fixed; bottom: 10px; right: 10px; font-size: 12px; color: gray;">v1.1</p>
+    <div id="log"></div>
+
+    <p style="position: fixed; bottom: 10px; right: 10px; font-size: 12px; color: gray;">v1.2</p>
 
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
     <script>
         let workflowData = null;
         let mappingData = null;
+        let originalWorkflowName = "";
 
         function startMapping() {
+            clearLog();
             const selectedNodeTypes = Array.from(document.getElementById('nodeTypes').selectedOptions).map(option => option.value);
 
-            if (selectedNodeTypes.length === 0) {
-                document.getElementById('status').innerText = "Please select at least one Node Type to map.";
+            if (!workflowData || !mappingData) {
+                updateStatus("Please upload both files first.", "red");
                 return;
             }
 
-            if (!workflowData || !mappingData) {
-                document.getElementById('status').innerText = "Please upload both files first.";
+            if (selectedNodeTypes.length === 0) {
+                updateStatus("Please select at least one Node Type.", "red");
                 return;
             }
+
+            updateStatus("Mapping started...", "black");
 
             const idMap = {};
             for (const row of mappingData.data) {
@@ -54,67 +92,118 @@
                 }
             }
 
-            function mapNode(node) {
-                if (!selectedNodeTypes.includes(node.type)) {
-                    return node;
-                }
+            const updatedWorkflow = JSON.parse(JSON.stringify(workflowData));
+            const mappedResults = [];
+            let nodeChanges = 0;
 
-                const updatedNode = JSON.parse(JSON.stringify(node));
-
-                // Map databaseId
-                if (updatedNode.parameters?.databaseId !== undefined) {
-                    const dbId = updatedNode.parameters.databaseId.toString();
-                    if (idMap[dbId]) {
-                        updatedNode.parameters.databaseId = parseInt(idMap[dbId]);
+            if (updatedWorkflow.nodes && Array.isArray(updatedWorkflow.nodes)) {
+                updatedWorkflow.nodes = updatedWorkflow.nodes.map(node => {
+                    if (!selectedNodeTypes.includes(node.type)) {
+                        return node;
                     }
-                }
 
-                // Map tableId
-                if (updatedNode.parameters?.tableId !== undefined) {
-                    const tableId = updatedNode.parameters.tableId.toString();
-                    if (idMap[tableId]) {
-                        updatedNode.parameters.tableId = parseInt(idMap[tableId]);
+                    let changesInNode = 0;
+                    const updatedNode = JSON.parse(JSON.stringify(node));
+
+                    // Map databaseId
+                    if (updatedNode.parameters?.databaseId !== undefined) {
+                        const dbId = updatedNode.parameters.databaseId.toString();
+                        if (idMap[dbId]) {
+                            mappedResults.push(`Node ${node.name || node.id}: databaseId ${dbId} → ${idMap[dbId]}`);
+                            updatedNode.parameters.databaseId = parseInt(idMap[dbId]);
+                            changesInNode++;
+                        }
                     }
-                }
 
-                // Map fieldIds inside fieldsUi
-                if (updatedNode.parameters?.fieldsUi?.fieldValues) {
-                    for (const field of updatedNode.parameters.fieldsUi.fieldValues) {
-                        if (field.fieldId !== undefined) {
-                            const fieldId = field.fieldId.toString();
-                            if (idMap[fieldId]) {
-                                field.fieldId = parseInt(idMap[fieldId]);
+                    // Map tableId
+                    if (updatedNode.parameters?.tableId !== undefined) {
+                        const tableId = updatedNode.parameters.tableId.toString();
+                        if (idMap[tableId]) {
+                            mappedResults.push(`Node ${node.name || node.id}: tableId ${tableId} → ${idMap[tableId]}`);
+                            updatedNode.parameters.tableId = parseInt(idMap[tableId]);
+                            changesInNode++;
+                        }
+                    }
+
+                    // Map fieldIds
+                    if (updatedNode.parameters?.fieldsUi?.fieldValues) {
+                        for (const field of updatedNode.parameters.fieldsUi.fieldValues) {
+                            if (field.fieldId !== undefined) {
+                                const fieldId = field.fieldId.toString();
+                                if (idMap[fieldId]) {
+                                    mappedResults.push(`Node ${node.name || node.id}: fieldId ${fieldId} → ${idMap[fieldId]}`);
+                                    field.fieldId = parseInt(idMap[fieldId]);
+                                    changesInNode++;
+                                }
                             }
                         }
                     }
-                }
 
-                return updatedNode;
+                    if (changesInNode > 0) {
+                        nodeChanges++;
+                    }
+                    return updatedNode;
+                });
             }
 
-            const updatedWorkflow = JSON.parse(JSON.stringify(workflowData));
-            if (updatedWorkflow.nodes && Array.isArray(updatedWorkflow.nodes)) {
-                updatedWorkflow.nodes = updatedWorkflow.nodes.map(mapNode);
+            if (mappedResults.length === 0) {
+                updateStatus("No matching IDs found. Nothing mapped.", "orange");
+            } else {
+                updateStatus(`Mapping completed. ${mappedResults.length} IDs mapped across ${nodeChanges} nodes.`, "green");
             }
+
+            displayLog(mappedResults);
 
             const blob = new Blob([JSON.stringify(updatedWorkflow, null, 2)], {type: "application/json"});
             const url = URL.createObjectURL(blob);
 
             const link = document.getElementById('downloadLink');
+            const baseName = originalWorkflowName ? originalWorkflowName.replace(/\.json$/i, "") : "transformed_workflow";
             link.href = url;
-            link.download = "transformed_workflow.json";
+            link.download = `${baseName}_mapped.json`;
             link.style.display = 'block';
             link.innerText = "Download Transformed Workflow";
+        }
 
-            document.getElementById('status').innerText = "Mapping completed!";
+        function resetPage() {
+            workflowData = null;
+            mappingData = null;
+            originalWorkflowName = "";
+            document.getElementById('workflowFile').value = "";
+            document.getElementById('mappingFile').value = "";
+            document.getElementById('status').innerText = "";
+            document.getElementById('log').innerText = "";
+            document.getElementById('downloadLink').style.display = 'none';
+            updateStatus("Page reset. Upload new files.", "black");
+        }
+
+        function updateStatus(message, color) {
+            const status = document.getElementById('status');
+            status.innerText = message;
+            status.style.color = color;
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerText = "";
+        }
+
+        function displayLog(messages) {
+            if (messages.length > 0) {
+                document.getElementById('log').innerText = messages.join("\n");
+            }
         }
 
         document.getElementById('workflowFile').addEventListener('change', function(event) {
             const file = event.target.files[0];
+            originalWorkflowName = file.name;
             const reader = new FileReader();
             reader.onload = function(e) {
-                workflowData = JSON.parse(e.target.result);
-                document.getElementById('status').innerText = "Workflow JSON loaded.";
+                try {
+                    workflowData = JSON.parse(e.target.result);
+                    updateStatus("Workflow JSON loaded.", "green");
+                } catch {
+                    updateStatus("Error parsing Workflow JSON!", "red");
+                }
             };
             reader.readAsText(file);
         });
@@ -125,10 +214,14 @@
                 header: true,
                 complete: function(results) {
                     mappingData = results;
-                    document.getElementById('status').innerText = "Mapping CSV loaded.";
+                    updateStatus("Mapping CSV loaded.", "green");
+                },
+                error: function() {
+                    updateStatus("Error parsing Mapping CSV!", "red");
                 }
             });
         });
     </script>
+
 </body>
 </html>
