@@ -1,1 +1,91 @@
-<html><body><h1>Hello World</h1></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Baserow Workflow Transformer</title>
+</head>
+<body>
+    <h1>Baserow Workflow Transformer</h1>
+
+    <p>Upload your files:</p>
+
+    <label>Upload Workflow JSON:</label><br>
+    <input type="file" id="workflowFile" accept=".json"><br><br>
+
+    <label>Upload Mapping CSV:</label><br>
+    <input type="file" id="mappingFile" accept=".csv"><br><br>
+
+    <button onclick="startMapping()">Start Mapping</button>
+
+    <p id="status"></p>
+
+    <a id="downloadLink" style="display:none;">Download Transformed Workflow</a>
+
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
+    <script>
+        let workflowData = null;
+        let mappingData = null;
+
+        function startMapping() {
+            if (!workflowData || !mappingData) {
+                document.getElementById('status').innerText = "Please upload both files first.";
+                return;
+            }
+
+            const idMap = {};
+            for (const row of mappingData.data) {
+                if (row.your_id && row.customer_id) {
+                    idMap[row.your_id.trim()] = row.customer_id.trim();
+                }
+            }
+
+            const updatedWorkflow = JSON.stringify(workflowData, function(key, value) {
+                if (typeof value === "string") {
+                    const match = value.match(/^{{\s*(\d+)\s*}}$/);
+                    if (match && idMap[match[1]]) {
+                        return `{{ ${idMap[match[1]]} }}`;
+                    }
+                }
+                if (typeof value === "number") {
+                    if (idMap[value.toString()]) {
+                        return parseInt(idMap[value.toString()]);
+                    }
+                }
+                return value;
+            }, 2);
+
+            const blob = new Blob([updatedWorkflow], {type: "application/json"});
+            const url = URL.createObjectURL(blob);
+
+            const link = document.getElementById('downloadLink');
+            link.href = url;
+            link.download = "transformed_workflow.json";
+            link.style.display = 'block';
+            link.innerText = "Download Transformed Workflow";
+
+            document.getElementById('status').innerText = "Mapping completed!";
+        }
+
+        document.getElementById('workflowFile').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                workflowData = JSON.parse(e.target.result);
+                document.getElementById('status').innerText = "Workflow JSON loaded.";
+            };
+            reader.readAsText(file);
+        });
+
+        document.getElementById('mappingFile').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            Papa.parse(file, {
+                header: true,
+                complete: function(results) {
+                    mappingData = results;
+                    document.getElementById('status').innerText = "Mapping CSV loaded.";
+                }
+            });
+        });
+    </script>
+</body>
+</html>
