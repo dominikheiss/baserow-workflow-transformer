@@ -900,15 +900,13 @@
                     e.preventDefault();
                     section.classList.remove('drag-over');
                     
-                    const file = e.dataTransfer.files[0];
+                    // Nimm alle gedroppten Dateien
+                    const files = Array.from(e.dataTransfer.files);
                     const input = section.querySelector('input[type="file"]');
-                    
-                    if (file) {
-                        const dataTransfer = new DataTransfer();
-                        dataTransfer.items.add(file);
-                        input.files = dataTransfer.files;
-                        input.dispatchEvent(new Event('change'));
-                    }
+                    const dt = new DataTransfer();
+                    files.forEach(f => dt.items.add(f));
+                    input.files = dt.files;
+                    input.dispatchEvent(new Event('change'));
                 });
             });
         }
