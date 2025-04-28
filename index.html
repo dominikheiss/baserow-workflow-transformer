@@ -358,12 +358,12 @@
     <div class="container">
         <h1>Bons-AI: N8N Workflow ID Mapper</h1>
         <div id="dropArea" class="upload-section" style="border: 2px dashed #4f46e5; text-align:center; margin-bottom:1rem; cursor:pointer;">
-            <b>Workflows hierher ziehen oder klicken, um auszuwählen</b>
+            <b>Drag & drop workflows here or click to select</b>
             <input type="file" id="workflowFile" accept=".json" multiple style="display:none;">
             <div id="fileList"></div>
         </div>
         <div id="csvDropArea" class="upload-section" style="border: 2px dashed #10b981; text-align:center; margin-bottom:1rem; cursor:pointer;">
-            <b>Mapping CSV hierher ziehen oder klicken, um auszuwählen</b>
+            <b>Drag & drop mapping CSV here or click to select</b>
             <input type="file" id="mappingFile" accept=".csv" style="display:none;">
             <div id="csvFileList"></div>
         </div>
@@ -408,7 +408,7 @@
 
         <div class="debug-toggle">
             <input type="checkbox" id="debugToggle">
-            <label for="debugToggle">Debug-Log anzeigen</label>
+            <label for="debugToggle">Show Debug Log</label>
         </div>
     </div>
 
@@ -450,7 +450,7 @@
             }
             handleFiles(files);
             if (files.length > 1 && selectedFiles.length === 1) {
-                showToast('Warnung: Ihr Browser hat nur eine Datei übernommen. Multi-Drag&Drop wird evtl. nicht unterstützt.', '#f59e0b');
+                showToast('Warning: Your browser has only accepted one file. Multi-Drag&Drop might not be supported.', '#f59e0b');
             }
         });
         workflowInput.addEventListener('change', e => {
@@ -530,7 +530,7 @@
             csvDropArea.style.background = '';
             const files = Array.from(e.dataTransfer.files);
             if (files.length > 0 && !files[0].name.toLowerCase().endsWith('.csv')) {
-                showToast('Nur CSV-Dateien erlaubt!', '#ef4444');
+                showToast('Only CSV files allowed!', '#ef4444');
                 return;
             }
             handleCSV(files);
@@ -538,7 +538,7 @@
         csvInput.addEventListener('change', e => {
             const files = Array.from(e.target.files);
             if (files.length > 0 && !files[0].name.toLowerCase().endsWith('.csv')) {
-                showToast('Nur CSV-Dateien erlaubt!', '#ef4444');
+                showToast('Only CSV files allowed!', '#ef4444');
                 csvInput.value = '';
                 return;
             }
@@ -563,7 +563,7 @@
             renderCSVFileList();
             mappingData = null;
             document.getElementById('mappingFile').value = '';
-            updateStatus("Mapping CSV entfernt.", "orange");
+            updateStatus("Mapping CSV removed.", "orange");
         }
         function loadCSVFile() {
             if (!selectedCSV) return;
@@ -668,8 +668,8 @@
                 return;
             }
 
-            // Fortschritt/Status
-            updateStatus("Mapping läuft...", "#4f46e5");
+            // Progress/Status
+            updateStatus("Mapping in progress...", "#4f46e5");
             document.getElementById('progressContainer').style.display = 'block';
             document.getElementById('progressBar').style.width = '0%';
             let progress = 0;
@@ -678,7 +678,7 @@
                 document.getElementById('progressBar').style.width = `${Math.min(progress,100)}%`;
             }, 200);
 
-            // Multi-Workflow-Unterstützung
+            // Multi-Workflow Support
             const workflows = Array.isArray(workflowData) ? workflowData : [workflowData];
             let allLogs = [];
             let allErrorGroups = [];
@@ -757,12 +757,12 @@
                 const errorGroups = groupUnmapped(notInMapping);
                 let errorLog = [];
                 if (mappedResults.length === 0) {
-                    errorLog.push("<b>Keine passenden IDs gefunden. Nichts gemappt.</b>");
+                    errorLog.push("<b>No matching IDs found. Nothing mapped.</b>");
                 } else {
-                    errorLog.push(`<b>Mapping abgeschlossen.</b> ${mappedResults.length} IDs gemappt in ${nodeChanges} Nodes.`);
+                    errorLog.push(`<b>Mapping completed.</b> ${mappedResults.length} IDs mapped in ${nodeChanges} nodes.`);
                 }
                 if (unmappedUsed.length > 0) {
-                    errorLog.push("IDs im Workflow gefunden, aber nicht gemappt (obwohl in Mapping-CSV): " + unmappedUsed.join(", "));
+                    errorLog.push("IDs found in workflow but not mapped (although in mapping CSV): " + unmappedUsed.join(", "));
                 }
                 const wfName = workflowNames[idx] || originalWorkflowName || `Workflow_${idx+1}`;
                 allLogs.push(`<h3>Workflow ${idx+1}: ${wfName} </h3>` + errorLog.join('<br>'));
@@ -772,26 +772,26 @@
                 allBlobs.push(blob);
                 allNames.push((wfName ? wfName.replace(/\.json$/i, "") : "transformed_workflow") + `_mapped.json`);
                 if (debugMode) {
-                    allDebugLogs.push(`<details open><summary style='font-weight:bold;color:#10b981;'>Debug-Log für ${wfName}</summary>` +
-                        `<b>Alle gefundenen IDs im Workflow:</b><br><code style='font-size:0.9em;'>${Array.from(foundIds).join(', ')}</code><br>` +
-                        `<b>Alle original_id aus Mapping-CSV:</b><br><code style='font-size:0.9em;'>${Object.keys(idMap).join(', ')}</code></details>`);
+                    allDebugLogs.push(`<details open><summary style='font-weight:bold;color:#10b981;'>Debug Log for ${wfName}</summary>` +
+                        `<b>All IDs found in workflow:</b><br><code style='font-size:0.9em;'>${Array.from(foundIds).join(', ')}</code><br>` +
+                        `<b>All original_id from mapping CSV:</b><br><code style='font-size:0.9em;'>${Object.keys(idMap).join(', ')}</code></details>`);
                 }
             });
-            // Download-Links
+            // Download Links
             const downloadLinks = allBlobs.map((blob, i) => {
                 const url = URL.createObjectURL(blob);
                 return `<a href="${url}" download="${allNames[i]}" class="download-link">Download Workflow ${i+1}</a>`;
             }).join(' ');
             document.getElementById('downloadLink').style.display = 'none';
             document.getElementById('zipDownloadContainer').innerHTML = downloadLinks +
-                '<button onclick="downloadAllAsZip()" style="margin-left:20px;">Alle als ZIP herunterladen</button>';
-            // Log-Ausgabe
+                '<button onclick="downloadAllAsZip()" style="margin-left:20px;">Download All as ZIP</button>';
+            // Log Output
             displayLog(allLogs, allErrorGroups[0], allDetails.flat(), allDebugLogs);
             lastDownloadBlobs = allBlobs.map((blob, i) => ({blob, name: allNames[i]}));
             clearInterval(progressInterval);
             document.getElementById('progressContainer').style.display = 'none';
-            updateStatus('Mapping abgeschlossen! ✔️', '#10b981');
-            showToast('Mapping erfolgreich!', '#10b981');
+            updateStatus('Mapping completed! ✔️', '#10b981');
+            showToast('Mapping successful!', '#10b981');
         }
 
         async function downloadAllAsZip() {
