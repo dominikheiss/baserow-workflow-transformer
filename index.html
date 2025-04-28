@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>N8N: Baserow Workflow Transformer v2.9.1</title>
+    <title>Bons-AI: N8N Workflow ID Mapper</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -356,7 +356,7 @@
     </button>
 
     <div class="container">
-        <h1>Baserow Workflow Transformer v2.9.1</h1>
+        <h1>Bons-AI: N8N Workflow ID Mapper</h1>
         <div id="dropArea" class="upload-section" style="border: 2px dashed #4f46e5; text-align:center; margin-bottom:1rem; cursor:pointer;">
             <b>Workflows hierher ziehen oder klicken, um auszuwählen</b>
             <input type="file" id="workflowFile" accept=".json" multiple style="display:none;">
@@ -690,8 +690,8 @@
             workflows.forEach((wf, idx) => {
                 const idMap = {};
                 for (const row of mappingData.data) {
-                    if (row.your_id && row.customer_id) {
-                        idMap[row.your_id.trim()] = row.customer_id.trim();
+                    if (row.original_id && row.customer_id) {
+                        idMap[row.original_id.trim()] = row.customer_id.trim();
                     }
                 }
                 const updatedWorkflow = JSON.parse(JSON.stringify(wf));
@@ -774,7 +774,7 @@
                 if (debugMode) {
                     allDebugLogs.push(`<details open><summary style='font-weight:bold;color:#10b981;'>Debug-Log für ${wfName}</summary>` +
                         `<b>Alle gefundenen IDs im Workflow:</b><br><code style='font-size:0.9em;'>${Array.from(foundIds).join(', ')}</code><br>` +
-                        `<b>Alle your_id aus Mapping-CSV:</b><br><code style='font-size:0.9em;'>${Object.keys(idMap).join(', ')}</code></details>`);
+                        `<b>Alle original_id aus Mapping-CSV:</b><br><code style='font-size:0.9em;'>${Object.keys(idMap).join(', ')}</code></details>`);
                 }
             });
             // Download-Links
